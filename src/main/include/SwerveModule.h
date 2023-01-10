@@ -15,8 +15,13 @@
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/geometry/Rotation2d.h>
 #include <rev/CANSparkMax.h>
+#include "frc/geometry/Rotation2d.h"
+#include "units/angle.h"
+#include "units/length.h"
+#include "units/math.h"
 
 namespace drive {
+
     class SwerveModule {
         public:
             SwerveModule(int drivemotor_in, int turnmotor_in, int encoder_in, bool drive_inverted = false);
@@ -47,12 +52,15 @@ namespace drive {
 
             frc2::PIDController drivePIDController { 0.0001, 0.0, 0.0};
             frc2::PIDController turnPIDController {
-                0.009, // P: 0.011
-                0.000, // I: 0.00
-                0.0000000025, // D: 0.0000000025
+                0.010, // P: 0.011
+                0.000, // I: 0.000
+                0.000, // D: 0.000
             };
 
-            frc::SimpleMotorFeedforward<units::meters> driveFeedforward { 1_V, 2.5_V / 1_mps };
+            frc::SimpleMotorFeedforward<units::meters> driveFeedforward { 
+                1_V, // kS
+                2.5_V / 1_mps, // kV
+            };
 
             units::degree_t lastAngle = 0_deg;
     };

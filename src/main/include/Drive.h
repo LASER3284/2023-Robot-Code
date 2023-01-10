@@ -1,7 +1,3 @@
-/*
- * File created by Charlotte Patton
- */
-
 #pragma once
 
 #include "SwerveModule.h"
@@ -18,22 +14,33 @@
 #include <frc/geometry/Translation2d.h>
 #include <frc2/command/SwerveControllerCommand.h>
 #include <frc/controller/PIDController.h>
+#include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/apriltag/AprilTagFieldLayout.h>
+#include <frc/controller/ProfiledPIDController.h>
+
+#include <pathplanner/lib/PathPlanner.h>
+#include <pathplanner/lib/commands/PPSwerveControllerCommand.h>
+#include <photonlib/PhotonCamera.h>
+#include <photonlib/RobotPoseEstimator.h>
+
 #include <AHRS.h>
+
 #include <memory>
 #include <string>
 #include <units/voltage.h>
 #include <units/length.h>
 #include <frc/Filesystem.h>
 #include <algorithm>
-#include <pathplanner/lib/PathPlanner.h>
-#include <pathplanner/lib/commands/PPSwerveControllerCommand.h>
-#include <frc/DriverStation.h>
-#include <frc/smartdashboard/SmartDashboard.h>
 #include <vector>
 #include <map>
+
 namespace drive {
     class Constants {
         public:
+            static constexpr units::meters_per_second_t maxTranslationalVelocity = 3.5_mps;
+            static constexpr units::radians_per_second_t maxRotationVelocity = 3.75_rad_per_s;
+
             //static constexpr double kDefaultS = 0.0_V;
             //static constexpr double kDefaultV = 0.0_V * 1_s / 1_m;
             //static constexpr double kDefaultA = 0.0_V * 1_s / 1_m;
@@ -79,14 +86,22 @@ namespace drive {
             frc::Joystick* controller;
             bool is_joystickControl;
 
-            SwerveModule frontleft = SwerveModule(1, 2, 9);
+            SwerveModule frontleft = SwerveModule(1, 2, 9, true);
             SwerveModule frontright = SwerveModule(3, 4, 10, true);
-            SwerveModule backleft = SwerveModule(5, 6, 11);
-            SwerveModule backright = SwerveModule(7, 8, 12);
+            SwerveModule backleft = SwerveModule(5, 6, 11, true);
+            SwerveModule backright = SwerveModule(7, 8, 12, true);
 
+            /// @brief Current heading for which to retain for holding straight lines / staying consistent
             frc::Rotation2d desiredHeading { 0_deg };
+            
+            /// @brief Whether or not to keep the robot rotation heading controlled
             bool bProtectHeading = false;
+
+            /// @brief A PID controller used to keep the robot held to a specific heading
             frc2::PIDController headingPIDController { 0.0000001, 0, 0.0 };
+            
+            /// @brief Used to snap the robot to specific rotation angles based on the pose angle
+            frc2::PIDController headingSnapPIDController { 0.0, 0.0, 0.0 };
 
             AHRS gyro { frc::SerialPort::Port::kUSB };
 
@@ -94,28 +109,27 @@ namespace drive {
                 frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation
             };
 
-            // TODO: Implement AprilTagFieldLayout
-            // frc::AprilTagFieldLayout layout { frc::filesystem::GetDeployDirectory() + "/TagLayout.json" };
+            /// @brief A shared ptr managing the AprilTag field layout
+            std::shared_ptr<frc::AprilTagFieldLayout> tagLayout = std::make_shared<frc::AprilTagFieldLayout>(
+                (frc::filesystem::GetDeployDirectory() + "/TagLayout.json")
+            );
 
-            // TODO: Use PhotonLib once it gets built for 2023
+            /// @brief A list of mappings between photonlib::PhotonCamera and Transform3d
+            std::vector<std::pair<std::shared_ptr<photonlib::PhotonCamera>, frc::Transform3d>> cameras {
+                { std::make_shared<photonlib::PhotonCamera>("mainCam"), frc::Transform3d() }
+            };
             
+            /// @brief A RobotPoseEstimator grabs the ""best"" pose to be used for the given AprilTags in view
+            photonlib::RobotPoseEstimator photonPoseEstimator { tagLayout, photonlib::CLOSEST_TO_REFERENCE_POSE, cameras };
+            frc::Pose3d pastRobotPose = frc::Pose3d();
+
             frc::SwerveDrivePoseEstimator<4> poseEstimator = frc::SwerveDrivePoseEstimator(
                 kinematics,
                 frc::Rotation2d {},
                 { frontleft.GetPosition(), frontright.GetPosition(), backleft.GetPosition(), backright.GetPosition() },
-                frc::Pose2d {},
-                
-                // Standard deviations of model states. 
-                // Increase these numbers to trust your model's state estimates less. 
-                // This matrix is in the form [x, y, theta]ᵀ, with units in meters and radians.
-                {0.1, 0.1, 0.1},
-
-                // Standard deviations of the vision measurements. 
-                // Increase these numbers to trust global measurements from vision less. 
-                // This matrix is in the form [x, y, theta]ᵀ, with units in meters and radians.
-                { 0.1, 0.1, 0.1 }
+                frc::Pose2d {}
             );
-            
+
             std::unique_ptr<pathplanner::PPSwerveControllerCommand> pathCommand;
     };
 }

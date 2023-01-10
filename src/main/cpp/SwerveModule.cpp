@@ -12,6 +12,9 @@ drive::SwerveModule::SwerveModule(int drivemotor_in, int turnmotor_in, int encod
 
     drivemotor->SetInverted(drive_inverted);
 
+    encoder->ConfigAbsoluteSensorRange(ctre::phoenix::sensors::AbsoluteSensorRange::Signed_PlusMinus180);
+    encoder->ConfigSensorInitializationStrategy(ctre::phoenix::sensors::SensorInitializationStrategy::BootToAbsolutePosition);
+
     // Limit the PID Controller's input range between -180 and 180 to decrease the maximum travel distance for PID.
     turnPIDController.EnableContinuousInput(
         -180,
@@ -23,10 +26,10 @@ drive::SwerveModule::SwerveModule(int drivemotor_in, int turnmotor_in, int encod
 frc::SwerveModuleState drive::SwerveModule::GetState() const {
     return {
         units::meters_per_second_t {
-            drivemotor->GetSelectedSensorVelocity() * 2 * 3.14159 * kWheelRadius / kEncoderResolution
+            (drivemotor->GetSelectedSensorVelocity() * 10) * (2 * 3.14159) * kWheelRadius / kEncoderResolution
         },
-        units::radian_t {
-            encoder->GetPosition() * (3.14159 / 180) / kEncoderResolution
+        units::degree_t {
+            encoder->GetAbsolutePosition()
         }
     };
 }
@@ -36,8 +39,8 @@ frc::SwerveModulePosition drive::SwerveModule::GetPosition() const {
         units::meter_t {
             drivemotor->GetSelectedSensorPosition() * 2 * 3.14159 * kWheelRadius / kEncoderResolution
         },
-        units::radian_t {
-            encoder->GetPosition() * (3.14159 / 180) / kEncoderResolution
+        units::degree_t {
+            encoder->GetAbsolutePosition()
         }
     };
 }
@@ -47,15 +50,15 @@ void drive::SwerveModule::ResetEncoders() {
     drivemotor->SetSelectedSensorPosition(0);
 }
 
-void drive::SwerveModule::SetDesiredState(const frc::SwerveModuleState& refstate, bool force_angle) {
+void drive::SwerveModule::SetDesiredState(const frc::SwerveModuleState& refstate, bool force_angle) {    
     // Optimize the reference state to avoid spinning further than 90 degrees
     const auto state = frc::SwerveModuleState::Optimize(
-        refstate, frc::Rotation2d((units::degree_t)encoder->GetPosition())
+        refstate, frc::Rotation2d((units::degree_t)encoder->GetAbsolutePosition())
     );
 
     // Calculate the drive output from the drive PID controller.
     const auto driveOutput = drivePIDController.Calculate(
-        drivemotor->GetSelectedSensorVelocity(),    // NOTE: This may need to be multiplied by 10 later on...
+        drivemotor->GetSelectedSensorVelocity(),
         state.speed.value()
     );
 
@@ -69,7 +72,7 @@ void drive::SwerveModule::SetDesiredState(const frc::SwerveModuleState& refstate
     }
 
     turnPIDController.SetSetpoint(setpoint);
-    const auto turnOutput = turnPIDController.Calculate(encoder->GetPosition());
+    const auto turnOutput = turnPIDController.Calculate(encoder->GetAbsolutePosition());
 
     if(!turnPIDController.AtSetpoint()) {
         // If we're not at the setpoint, move the turn motor.
@@ -81,16 +84,14 @@ void drive::SwerveModule::SetDesiredState(const frc::SwerveModuleState& refstate
     }
 
     // If we aren't commanding the wheels to move at all, don't apply the feed forward or anything
-    if(state.speed != 0_mps) {
-        // Set the motor outputs.
-        drivemotor->SetVoltage(units::volt_t{driveOutput} + driveff);
-    }
-
+    // Set the motor outputs.
+    drivemotor->SetVoltage(units::volt_t{driveOutput} + driveff);
+    
     lastAngle = state.angle.Degrees();
 }
 
 double drive::SwerveModule::getTurnEncPos() {
-    return encoder->GetPosition();
+    return encoder->GetAbsolutePosition();
 }
 
 double drive::SwerveModule::getDriveEncPos() {

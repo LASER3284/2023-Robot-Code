@@ -1,10 +1,6 @@
 #include "Drive.h"
-#include <frc/smartdashboard/SmartDashboard.h>
-#include <frc/geometry/Rotation2d.h>
-#include <frc/geometry/Translation2d.h>
 
 using namespace pathplanner;
-using namespace units::literals;
 
 drive::Drive::Drive(frc::Joystick* controller_in) {
     controller = controller_in;
@@ -12,7 +8,12 @@ drive::Drive::Drive(frc::Joystick* controller_in) {
     
     headingPIDController.EnableContinuousInput(-180, 180);
     headingPIDController.SetTolerance(4.5);
+    
+    headingSnapPIDController.EnableContinuousInput(-constants::Pi, constants::Pi);
+    headingSnapPIDController.SetTolerance(5);
+
     frc::SmartDashboard::PutData("headingPIDController", &headingPIDController);
+    frc::SmartDashboard::PutData("headingSnapPIDController", &headingSnapPIDController);
 }
 
 void drive::Drive::SetJoystick(bool state) {
@@ -28,7 +29,7 @@ void drive::Drive::Tick() {
 
     if(controller->GetRawButtonReleased(constants::XboxButtons::eBack)) {
         bProtectHeading = !bProtectHeading;
-        desiredHeading = gyro.GetRotation2d();
+        desiredHeading = poseEstimator.GetEstimatedPosition().Rotation();
         frc::SmartDashboard::PutBoolean("bProtectHeading", bProtectHeading);
     }
 
@@ -51,18 +52,54 @@ void drive::Drive::Tick() {
 
     // These initial casts to meter_t are pretty much just to make the compiler happy. 
     // Once we multiply by the max speed is when we get the actual speed
-    const frc::Translation2d translation = frc::Translation2d(units::length::meter_t(yAxis), units::length::meter_t(xAxis)) * SwerveModule::kMaxSpeed.value();
+    const frc::Translation2d translation = frc::Translation2d(units::meter_t(yAxis), units::meter_t(xAxis)) * SwerveModule::kMaxSpeed.value();
 
     if(bProtectHeading) {
         double angleAdjustment = headingPIDController.Calculate(
-            gyro.GetRotation2d().Degrees().value(), 
+            poseEstimator.GetEstimatedPosition().Rotation().Degrees().value(),
             desiredHeading.Degrees().value()
         );
 
         rAxis = std::clamp(angleAdjustment, -0.5, 0.5);
     }
 
-    const auto rotation = (rAxis * SwerveModule::kMaxAngularSpeed);
+    auto rotation = (rAxis * SwerveModule::kMaxAngularSpeed);
+
+    if(fieldRelative && controller->GetRawButtonPressed(constants::XboxButtons::eButtonRB)) {
+        // Convert the controller axes to radians
+        const units::radian_t controllerX = constants::mapScalarToRange<units::radian_t>(
+            frc::ApplyDeadband(controller->GetRawAxis(constants::XboxAxis::eRightAxisX), 0.10),
+            -(3.14159 / 2), (3.14159 / 2)
+        );
+        const units::radian_t controllerY = constants::mapScalarToRange<units::radian_t>(
+            frc::ApplyDeadband(controller->GetRawAxis(constants::XboxAxis::eRightAxisY), 0.10),
+            -(3.14159 / 2), (3.14159 / 2)
+        );
+        
+        // Calculate the angle of the controller
+        const units::radian_t p = units::math::atan2(controllerY, controllerX);
+
+        // This will snap the angle from the controller to the nearest 45deg angle
+        const units::radian_t snap_angle = 45_deg;
+        const units::radian_t snap = units::radian_t(round((p / snap_angle).value() * snap_angle.value()));
+
+        frc::SmartDashboard::PutNumber("snap_angle", units::degree_t(snap).value());
+
+        if(!headingSnapPIDController.AtSetpoint()) {
+            // Use the PID controller to calculate our angular velocity from the given angle (measurement) & snap point (setpoint)
+            rotation = units::radians_per_second_t(
+                headingSnapPIDController.Calculate(
+                    // Wraps the angle from -pi to +pi radians
+                    frc::AngleModulus(poseEstimator.GetEstimatedPosition().Rotation().Radians()).value(),
+                    snap.value()
+                )
+            );
+        }
+        else {
+            // If we're at the setpoint, don't even bother rotating with the joystick anymore
+            rotation = 0_rad_per_s;
+        }
+    }
 
     frc::ChassisSpeeds nonrelspeeds = frc::ChassisSpeeds();
     nonrelspeeds.omega = rotation;
@@ -88,7 +125,13 @@ void drive::Drive::Tick() {
         };
     }
     else {
-        kinematics.DesaturateWheelSpeeds(&states, SwerveModule::kMaxSpeed);
+        kinematics.DesaturateWheelSpeeds(
+            &states, 
+            fieldRelative ? relspeeds : nonrelspeeds, 
+            SwerveModule::kMaxSpeed, 
+            drive::Constants::maxTranslationalVelocity, 
+            drive::Constants::maxRotationVelocity
+        );
     }
     
     auto [fl, fr, bl, br] = states;
@@ -169,11 +212,18 @@ frc::Pose2d drive::Drive::GetPose() {
 } 
 
 void drive::Drive::UpdateOdometry() {
-    frc::SmartDashboard::PutNumber("currentHeading", gyro.GetRotation2d().Degrees().value());
-
-    // TODO: Implement additional pose estimation via PhotonLib / AprilTags
     poseEstimator.Update(
         gyro.GetRotation2d(), 
         { frontleft.GetPosition(), frontright.GetPosition(), backleft.GetPosition(), backright.GetPosition() }
     );
+
+    photonPoseEstimator.SetReferencePose(frc::Pose3d(poseEstimator.GetEstimatedPosition()));
+    units::millisecond_t currentTime = frc::Timer::GetFPGATimestamp();
+    auto result = photonPoseEstimator.Update();
+
+    // If we have a latency delay of 0ms, then we definitely didn't actually get some sort of result for AprilTag parsing.
+    if(result.second > 0_ms) {
+        units::millisecond_t timestamp = (currentTime - result.second);
+        poseEstimator.AddVisionMeasurement(result.first.ToPose2d(), timestamp);
+    }
 }

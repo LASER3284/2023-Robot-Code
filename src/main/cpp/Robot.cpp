@@ -39,7 +39,7 @@ void Robot::RobotPeriodic() {
 void Robot::AutonomousInit() {
     currentAutonomousState = m_chooser.GetSelected();
     fmt::print("Currently selected auto path: {}\n", currentAutonomousState);
-    drivetrain.SetTrajectory(currentAutonomousState);
+    drivetrain.SetTrajectory(currentAutonomousState, true);
 }
 
 void Robot::AutonomousPeriodic() {
