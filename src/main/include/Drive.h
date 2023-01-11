@@ -101,7 +101,7 @@ namespace drive {
             frc2::PIDController headingPIDController { 0.0000001, 0, 0.0 };
             
             /// @brief Used to snap the robot to specific rotation angles based on the pose angle
-            frc2::PIDController headingSnapPIDController { 0.0, 0.0, 0.0 };
+            frc2::PIDController headingSnapPIDController { 4.250000, 0.0, 0.1250 };
 
             AHRS gyro { frc::SerialPort::Port::kUSB };
 

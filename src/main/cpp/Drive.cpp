@@ -6,11 +6,11 @@ drive::Drive::Drive(frc::Joystick* controller_in) {
     controller = controller_in;
     gyro.Reset();
     
-    headingPIDController.EnableContinuousInput(-180, 180);
-    headingPIDController.SetTolerance(4.5);
+    headingPIDController.EnableContinuousInput(-constants::Pi, constants::Pi);
+    headingPIDController.SetTolerance(units::radian_t(2_deg).value());
     
     headingSnapPIDController.EnableContinuousInput(-constants::Pi, constants::Pi);
-    headingSnapPIDController.SetTolerance(5);
+    headingSnapPIDController.SetTolerance(units::radian_t(2_deg).value());
 
     frc::SmartDashboard::PutData("headingPIDController", &headingPIDController);
     frc::SmartDashboard::PutData("headingSnapPIDController", &headingSnapPIDController);
@@ -52,53 +52,72 @@ void drive::Drive::Tick() {
 
     // These initial casts to meter_t are pretty much just to make the compiler happy. 
     // Once we multiply by the max speed is when we get the actual speed
-    const frc::Translation2d translation = frc::Translation2d(units::meter_t(yAxis), units::meter_t(xAxis)) * SwerveModule::kMaxSpeed.value();
-
-    if(bProtectHeading) {
-        double angleAdjustment = headingPIDController.Calculate(
-            poseEstimator.GetEstimatedPosition().Rotation().Degrees().value(),
-            desiredHeading.Degrees().value()
-        );
-
-        rAxis = std::clamp(angleAdjustment, -0.5, 0.5);
-    }
+    frc::Translation2d translation = frc::Translation2d(units::meter_t(yAxis), units::meter_t(xAxis)) * SwerveModule::kMaxSpeed.value();
 
     auto rotation = (rAxis * SwerveModule::kMaxAngularSpeed);
 
-    if(fieldRelative && controller->GetRawButtonPressed(constants::XboxButtons::eButtonRB)) {
-        // Convert the controller axes to radians
-        const units::radian_t controllerX = constants::mapScalarToRange<units::radian_t>(
-            frc::ApplyDeadband(controller->GetRawAxis(constants::XboxAxis::eRightAxisX), 0.10),
-            -(3.14159 / 2), (3.14159 / 2)
+    if(bProtectHeading) {
+        double angleAdjustment = headingPIDController.Calculate(
+            gyro.GetRotation2d().Radians().value(),
+            desiredHeading.Radians().value()
         );
-        const units::radian_t controllerY = constants::mapScalarToRange<units::radian_t>(
-            frc::ApplyDeadband(controller->GetRawAxis(constants::XboxAxis::eRightAxisY), 0.10),
-            -(3.14159 / 2), (3.14159 / 2)
-        );
-        
-        // Calculate the angle of the controller
-        const units::radian_t p = units::math::atan2(controllerY, controllerX);
 
-        // This will snap the angle from the controller to the nearest 45deg angle
-        const units::radian_t snap_angle = 45_deg;
-        const units::radian_t snap = units::radian_t(round((p / snap_angle).value() * snap_angle.value()));
+        rotation *= angleAdjustment;
+    }
 
-        frc::SmartDashboard::PutNumber("snap_angle", units::degree_t(snap).value());
 
-        if(!headingSnapPIDController.AtSetpoint()) {
+    bool bForceAngle = false;
+
+    // If you are field relative and hold RB, snap the robot itself to the nearest 45deg angle based on the right joystick
+    if(fieldRelative && controller->GetRawButton(constants::XboxButtons::eButtonRB)) {
+        // Apply a small deadband in order to avoid snapping to 90deg at rest
+        if(frc::ApplyDeadband(controller->GetRawAxis(constants::XboxAxis::eRightAxisX), 0.10) != 0 || frc::ApplyDeadband(controller->GetRawAxis(constants::XboxAxis::eRightAxisY), 0.10) != 0) {
+            // Convert the controller axes to radians
+            const double controllerX = constants::mapScalarToRange(
+                controller->GetRawAxis(constants::XboxAxis::eRightAxisX),
+                -(constants::Pi / 2), (constants::Pi / 2)
+            );
+            const double controllerY = constants::mapScalarToRange(
+                controller->GetRawAxis(constants::XboxAxis::eRightAxisY),
+                -(constants::Pi / 2), (constants::Pi / 2)
+            );
+            
+            // Calculate the angle of the controller
+            const units::radian_t p = units::radian_t(atan2(controllerX, controllerY)) + 180_deg;
+
+            // This will snap the angle from the controller to the nearest 45deg angle
+            const units::degree_t snap_angle = 45_deg;
+            const units::radian_t snap = frc::AngleModulus(units::degree_t(round((units::degree_t(p) / snap_angle).value()) * snap_angle.value()));
+
+            frc::SmartDashboard::PutNumber("controllerX", controllerX);
+            frc::SmartDashboard::PutNumber("controllerY", controllerY);
+
+            frc::SmartDashboard::PutNumber("snap_angle_deg", units::degree_t(snap).value());
+            frc::SmartDashboard::PutNumber("snap_angle_rad", snap.value());
+            frc::SmartDashboard::PutNumber("curr_angle_rad", frc::AngleModulus(gyro.GetRotation2d().Radians()).value());
+            
             // Use the PID controller to calculate our angular velocity from the given angle (measurement) & snap point (setpoint)
-            rotation = units::radians_per_second_t(
+            const units::radians_per_second_t new_rotation =  units::radians_per_second_t(
                 headingSnapPIDController.Calculate(
                     // Wraps the angle from -pi to +pi radians
-                    frc::AngleModulus(poseEstimator.GetEstimatedPosition().Rotation().Radians()).value(),
+                    frc::AngleModulus(gyro.GetRotation2d().Radians()).value(),
                     snap.value()
                 )
             );
+
+            if(headingSnapPIDController.AtSetpoint()) {
+                // If we're at the setpoint, don't even bother rotating with the joystick anymore
+                rotation = 0_rad_per_s;
+            }
+            else {
+                rotation = new_rotation;
+                bForceAngle = true;
+            }
+        } else {
+            headingPIDController.Reset();
         }
-        else {
-            // If we're at the setpoint, don't even bother rotating with the joystick anymore
-            rotation = 0_rad_per_s;
-        }
+    } else if (fieldRelative) {
+        headingPIDController.Reset();
     }
 
     frc::ChassisSpeeds nonrelspeeds = frc::ChassisSpeeds();
@@ -117,6 +136,8 @@ void drive::Drive::Tick() {
 
     bool bXPattern = (controller->GetRawAxis(constants::XboxAxis::eLeftTrigger) >= 0.75);
     if(bXPattern) {
+        bForceAngle = true;
+
         states = wpi::array<frc::SwerveModuleState, 4> {
             frc::SwerveModuleState { 0_mps, frc::Rotation2d(45_deg) },
             frc::SwerveModuleState { 0_mps, frc::Rotation2d(315_deg) },
@@ -136,10 +157,10 @@ void drive::Drive::Tick() {
     
     auto [fl, fr, bl, br] = states;
 
-    frontleft.SetDesiredState(fl, bXPattern);
-    frontright.SetDesiredState(fr, bXPattern);
-    backleft.SetDesiredState(bl, bXPattern);
-    backright.SetDesiredState(br, bXPattern);
+    frontleft.SetDesiredState(fl, bForceAngle);
+    frontright.SetDesiredState(fr, bForceAngle);
+    backleft.SetDesiredState(bl, bForceAngle);
+    backright.SetDesiredState(br, bForceAngle);
 }
 
 void drive::Drive::LogEncoders() {

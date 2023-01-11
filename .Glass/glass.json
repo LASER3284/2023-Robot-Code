@@ -2,6 +2,9 @@
   "NetworkTables": {
     "transitory": {
       "SmartDashboard": {
+        "headingSnapPIDController": {
+          "open": true
+        },
         "open": true
       }
     },
