@@ -16,6 +16,10 @@ Robot::~Robot() {
 }
 
 void Robot::RobotInit() {
+    for (auto const& [human_name, path_file] : mTrajectoryMap)
+    {
+        m_chooser.AddOption(human_name, path_file);
+    }
     m_chooser.SetDefaultOption("Test Path", "Test Path");
 
     frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
@@ -43,11 +47,21 @@ void Robot::AutonomousInit() {
 }
 
 void Robot::AutonomousPeriodic() {
-    bool trajectoryCompleted = drivetrain.FollowTrajectory();
-    if(trajectoryCompleted) {
+    const drive::AutonomousState trajectoryCompleted = drivetrain.FollowTrajectory();
+    SmartDashboard::PutBoolean("bAtStopPoint", trajectoryCompleted.bAtStopPoint);
+    SmartDashboard::PutBoolean("bCompletedPath", trajectoryCompleted.bCompletedPath);
+
+    // By default, if the trajectory is completed, we might as well stop the drive train.
+    bool bForceStop = trajectoryCompleted.bCompletedPath;
+    if(trajectoryCompleted.bAtStopPoint) {
         if(currentAutonomousState == "Test Path") {
-            // TODO: Figure something to do here
+            
         }
+    }
+
+    // If we're fully finished with the path, force stop the drive train in order to stop moving
+    if(bForceStop) {
+        drivetrain.ForceStop();
     }
 }
 

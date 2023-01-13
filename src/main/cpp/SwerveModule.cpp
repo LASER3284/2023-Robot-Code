@@ -12,6 +12,15 @@ drive::SwerveModule::SwerveModule(int drivemotor_in, int turnmotor_in, int encod
 
     drivemotor->SetInverted(drive_inverted);
 
+    drivemotor->ConfigSupplyCurrentLimit({ 
+        true, // Enable
+        35, // Continuous Current Limit
+        60, // Peak Current Limit
+        0.1 // Peak Current Duration
+    });
+
+    turnmotor->SetSmartCurrentLimit(60);
+    
     encoder->ConfigAbsoluteSensorRange(ctre::phoenix::sensors::AbsoluteSensorRange::Signed_PlusMinus180);
     encoder->ConfigSensorInitializationStrategy(ctre::phoenix::sensors::SensorInitializationStrategy::BootToAbsolutePosition);
 
@@ -25,23 +34,15 @@ drive::SwerveModule::SwerveModule(int drivemotor_in, int turnmotor_in, int encod
 
 frc::SwerveModuleState drive::SwerveModule::GetState() const {
     return {
-        units::meters_per_second_t {
-            (drivemotor->GetSelectedSensorVelocity() * 10) * (2 * 3.14159) * kWheelRadius / kEncoderResolution
-        },
-        units::degree_t {
-            encoder->GetAbsolutePosition()
-        }
+        constants::falconToMPS(drivemotor->GetSelectedSensorVelocity(), kWheelCircumference, kGearRatio),
+        units::degree_t { encoder->GetAbsolutePosition() }
     };
 }
 
 frc::SwerveModulePosition drive::SwerveModule::GetPosition() const {
     return {
-        units::meter_t {
-            drivemotor->GetSelectedSensorPosition() * 2 * 3.14159 * kWheelRadius / kEncoderResolution
-        },
-        units::degree_t {
-            encoder->GetAbsolutePosition()
-        }
+        constants::falconToMeters(drivemotor->GetSelectedSensorPosition(), kWheelCircumference, kGearRatio),
+        units::degree_t { encoder->GetAbsolutePosition() }
     };
 }
 

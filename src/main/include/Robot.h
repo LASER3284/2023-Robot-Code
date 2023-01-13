@@ -34,7 +34,8 @@ class Robot : public frc::TimedRobot {
         frc::Joystick drivecontroller { 0 };
         drive::Drive drivetrain { &drivecontroller };
 
-        const std::map<std::string, std::vector<std::string>> mTrajectoryMap {
-            { "Test Path", { "Test Path" }}
+        const std::map<std::string, std::string> mTrajectoryMap {
+            { "Test Path", "Test Path" },
+            { "Cone Cube - Balance", "ConeCubeBalance" }
         };
 };

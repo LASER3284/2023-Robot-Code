@@ -15,7 +15,6 @@
 #include <frc2/command/SwerveControllerCommand.h>
 #include <frc/controller/PIDController.h>
 #include <frc/smartdashboard/SmartDashboard.h>
-#include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/controller/ProfiledPIDController.h>
 
@@ -41,21 +40,24 @@ namespace drive {
             static constexpr units::meters_per_second_t maxTranslationalVelocity = 3.5_mps;
             static constexpr units::radians_per_second_t maxRotationVelocity = 3.75_rad_per_s;
 
-            //static constexpr double kDefaultS = 0.0_V;
-            //static constexpr double kDefaultV = 0.0_V * 1_s / 1_m;
-            //static constexpr double kDefaultA = 0.0_V * 1_s / 1_m;
-
-            static constexpr double kTrajectoryX_P = 0.0;
+            static constexpr double kTrajectoryX_P = 1.0;
             static constexpr double kTrajectoryX_I = 0.0;
             static constexpr double kTrajectoryX_D = 0.0;
 
-            static constexpr double kTrajectoryY_P = 0.0;
+            static constexpr double kTrajectoryY_P = 1.0;
             static constexpr double kTrajectoryY_I = 0.0;
             static constexpr double kTrajectoryY_D = 0.0;
 
-            static constexpr double kTrajectoryTheta_P = 0.0;
+            static constexpr double kTrajectoryTheta_P = 1.0;
             static constexpr double kTrajectoryTheta_I = 0.0;
             static constexpr double kTrajectoryTheta_D = 0.0;
+    };
+
+    struct AutonomousState {
+        bool bAtStopPoint = false;
+        unsigned int currentStopIndex = -1;
+
+        bool bCompletedPath = false;
     };
 
     class Drive {
@@ -69,8 +71,11 @@ namespace drive {
             void UpdateOdometry();
             frc::Pose2d GetPose();
 
-            void SetTrajectory(std::string pathName, bool resetPose = false);
-            bool FollowTrajectory();
+            void SetTrajectory(const std::string& pathName, bool resetPose = false);
+            void StartNextTrajectory();
+            const AutonomousState FollowTrajectory();
+
+            void ForceStop();
         private:
 
             // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
@@ -130,6 +135,11 @@ namespace drive {
                 frc::Pose2d {}
             );
 
+            /// @brief A list/vector holding all of the paths to follow, each subpath is separated by the given stop point
+            std::vector<pathplanner::PathPlannerTrajectory> subpaths;
+            unsigned int currentStopPoint = -1;
+
+            /// @brief The PPSwerveControllerCommand for the current loaded subpath / stop point
             std::unique_ptr<pathplanner::PPSwerveControllerCommand> pathCommand;
     };
 }

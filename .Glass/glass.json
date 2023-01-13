@@ -2,6 +2,9 @@
   "NetworkTables": {
     "transitory": {
       "SmartDashboard": {
+        "Auto Modes": {
+          "open": true
+        },
         "headingSnapPIDController": {
           "open": true
         },
@@ -11,6 +14,7 @@
     "types": {
       "/FMSInfo": "FMSInfo",
       "/SmartDashboard/Auto Modes": "String Chooser",
+      "/SmartDashboard/PPSwerveControllerCommand_field": "Field2d",
       "/SmartDashboard/headingPIDController": "PIDController",
       "/SmartDashboard/headingSnapPIDController": "PIDController"
     }

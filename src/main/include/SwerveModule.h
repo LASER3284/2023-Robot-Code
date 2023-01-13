@@ -12,13 +12,15 @@
 #include <units/length.h>
 #include <units/velocity.h>
 #include <units/voltage.h>
+#include <units/angle.h>
+#include <units/acceleration.h>
+#include <units/length.h>
+#include <units/math.h>
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/geometry/Rotation2d.h>
 #include <rev/CANSparkMax.h>
 #include "frc/geometry/Rotation2d.h"
-#include "units/angle.h"
-#include "units/length.h"
-#include "units/math.h"
+#include "Constants.h"
 
 namespace drive {
 
@@ -38,7 +40,9 @@ namespace drive {
             };  // 1 rotation per second
             
         private:
-            static constexpr double kWheelRadius = 0.0508;
+            static constexpr double kGearRatio = (6.86 / 1.0);
+            static constexpr units::meter_t kWheelDiameter = 0.1016_m;
+            static constexpr units::meter_t kWheelCircumference = (kWheelDiameter * constants::Pi);
             static constexpr int kEncoderResolution = 2048;
 
             static constexpr auto kModuleMaxAngularVelocity =
@@ -50,6 +54,7 @@ namespace drive {
             rev::CANSparkMax*  turnmotor;
             ctre::phoenix::sensors::CANCoder*               encoder;
 
+            // TODO: Run drive-train characterization
             frc2::PIDController drivePIDController { 0.0001, 0.0, 0.0};
             frc2::PIDController turnPIDController {
                 0.010, // P: 0.011
@@ -58,8 +63,9 @@ namespace drive {
             };
 
             frc::SimpleMotorFeedforward<units::meters> driveFeedforward { 
-                1_V, // kS
-                2.5_V / 1_mps, // kV
+                0.32_V,                      // kS
+                1.51 * 1_V * 1_s / 1_m,      // kV
+                0.27 * 1_V * 1_s * 1_s / 1_m // kA
             };
 
             units::degree_t lastAngle = 0_deg;

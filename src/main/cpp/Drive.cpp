@@ -25,8 +25,7 @@ void drive::Drive::Tick() {
 
     if(!is_joystickControl) return;
 
-    bool fieldRelative = frc::SmartDashboard::GetBoolean("bFieldOriented", false);
-
+    bool fieldRelative = frc::SmartDashboard::GetBoolean("bFieldOriented", true);
     if(controller->GetRawButtonReleased(constants::XboxButtons::eBack)) {
         bProtectHeading = !bProtectHeading;
         desiredHeading = poseEstimator.GetEstimatedPosition().Rotation();
@@ -165,13 +164,13 @@ void drive::Drive::Tick() {
 
 void drive::Drive::LogEncoders() {
     frc::SmartDashboard::PutNumber("fl_turn", frontleft.getTurnEncPos());
-    frc::SmartDashboard::PutNumber("fl_drive", frontleft.getDriveEncPos());
+    frc::SmartDashboard::PutNumber("fl_drive", frontleft.GetPosition().distance.value());
     frc::SmartDashboard::PutNumber("fr_turn", frontright.getTurnEncPos());
-    frc::SmartDashboard::PutNumber("fr_drive", frontright.getDriveEncPos());
+    frc::SmartDashboard::PutNumber("fr_drive", frontright.GetPosition().distance.value());
     frc::SmartDashboard::PutNumber("bl_turn", backleft.getTurnEncPos());
-    frc::SmartDashboard::PutNumber("bl_drive", backleft.getDriveEncPos());
+    frc::SmartDashboard::PutNumber("bl_drive", backleft.GetPosition().distance.value());
     frc::SmartDashboard::PutNumber("br_turn", backright.getTurnEncPos());
-    frc::SmartDashboard::PutNumber("br_drive", backright.getDriveEncPos());
+    frc::SmartDashboard::PutNumber("br_drive", backright.GetPosition().distance.value());
 }
 
 void drive::Drive::ResetOdometry() {
@@ -183,49 +182,64 @@ void drive::Drive::ResetOdometry() {
     gyro.ZeroYaw();
 }
 
-bool drive::Drive::FollowTrajectory() {
+const drive::AutonomousState drive::Drive::FollowTrajectory() {
     if(pathCommand == nullptr) {
         FRC_ReportError(1, "Unable to follow trajectory; No valid path command generated");
-        return true;
+        return { false, 9999, true };
     }
-    
+
     if(!pathCommand->IsFinished()) {
         pathCommand->Execute();
     }
-
-    return pathCommand->IsFinished();
+    
+    return { 
+        pathCommand->IsFinished(),
+        currentStopPoint,
+        (pathCommand->IsFinished() && currentStopPoint + 1 >= subpaths.size())
+    };
 }
 
-void drive::Drive::SetTrajectory(std::string pathName, bool resetPose) {
-    PathPlannerTrajectory path = PathPlanner::loadPath(pathName, { 4_mps, 3_mps_sq });
-    pathCommand = std::make_unique<PPSwerveControllerCommand>(
-        path, 
-        [this]() { return this->GetPose(); },
-        kinematics,
-        frc2::PIDController(drive::Constants::kTrajectoryX_P, drive::Constants::kTrajectoryX_I, drive::Constants::kTrajectoryX_D),
-        frc2::PIDController(drive::Constants::kTrajectoryY_P, drive::Constants::kTrajectoryY_I, drive::Constants::kTrajectoryY_D),
-        frc2::PIDController(drive::Constants::kTrajectoryTheta_P, drive::Constants::kTrajectoryTheta_I, drive::Constants::kTrajectoryTheta_D),
-        [this](auto states) {
-            auto [fl, fr, bl, br] = states;
+void drive::Drive::StartNextTrajectory() {
+    if(currentStopPoint + 1 < subpaths.size()) {
+        currentStopPoint += 1;
+        frc::SmartDashboard::PutNumber("currentStopPoint", currentStopPoint);
 
-            this->frontleft.SetDesiredState(fl);
-            this->frontright.SetDesiredState(fr);
-            this->backleft.SetDesiredState(bl);
-            this->backright.SetDesiredState(br);
-        }
-    );
+        pathCommand = std::make_unique<PPSwerveControllerCommand>(
+            subpaths[currentStopPoint], 
+            [this]() { return this->GetPose(); },
+            kinematics,
+            frc2::PIDController(drive::Constants::kTrajectoryX_P, drive::Constants::kTrajectoryX_I, drive::Constants::kTrajectoryX_D),
+            frc2::PIDController(drive::Constants::kTrajectoryY_P, drive::Constants::kTrajectoryY_I, drive::Constants::kTrajectoryY_D),
+            frc2::PIDController(drive::Constants::kTrajectoryTheta_P, drive::Constants::kTrajectoryTheta_I, drive::Constants::kTrajectoryTheta_D),
+            [this](auto states) {
+                auto [fl, fr, bl, br] = states;
+
+                this->frontleft.SetDesiredState(fl);
+                this->frontright.SetDesiredState(fr);
+                this->backleft.SetDesiredState(bl);
+                this->backright.SetDesiredState(br);
+            }
+        );
+
+        // Start and schedule the path following command
+        pathCommand->Schedule();
+    }
+}
+
+void drive::Drive::SetTrajectory(const std::string& pathName, bool resetPose) {
+    subpaths = PathPlanner::loadPathGroup(pathName, { { 4_mps, 3_mps_sq } });
+    currentStopPoint = -1;
+    
+    StartNextTrajectory();
 
     if(resetPose) {
         ResetOdometry();
         poseEstimator.ResetPosition(
             gyro.GetRotation2d(),
             { frontleft.GetPosition(), frontright.GetPosition(), backleft.GetPosition(), backright.GetPosition() },
-            path.getInitialHolonomicPose()
+            subpaths[currentStopPoint].getInitialHolonomicPose()
         );
     }
-
-    // Start and schedule the path following command
-    pathCommand->Schedule();
 }
 
 frc::Pose2d drive::Drive::GetPose() {
@@ -247,4 +261,20 @@ void drive::Drive::UpdateOdometry() {
         units::millisecond_t timestamp = (currentTime - result.second);
         poseEstimator.AddVisionMeasurement(result.first.ToPose2d(), timestamp);
     }
+}
+
+void drive::Drive::ForceStop() {
+    wpi::array<frc::SwerveModuleState, 4> states = wpi::array<frc::SwerveModuleState, 4> {
+        frc::SwerveModuleState { 0_mps, frontleft.GetPosition().angle },
+        frc::SwerveModuleState { 0_mps, frontright.GetPosition().angle },
+        frc::SwerveModuleState { 0_mps, backleft.GetPosition().angle },
+        frc::SwerveModuleState { 0_mps, backright.GetPosition().angle },
+    };
+
+    auto [fl, fr, bl, br] = states;
+
+    frontleft.SetDesiredState(fl, false);
+    frontright.SetDesiredState(fr, false);
+    backleft.SetDesiredState(bl, false);
+    backright.SetDesiredState(br, false);
 }
