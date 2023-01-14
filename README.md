@@ -8,3 +8,8 @@
 * Drive train is currently the only subsystem impemented
 * `frc::TimedRobot` base is used for main control process
 * Path planning through PathPlanner
+## Contributors
+* Thomas Iliff
+* Charlotte Patton
+* Nate Franklin
+* Jordan Branson
