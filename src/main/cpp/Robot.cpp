@@ -47,6 +47,13 @@ void Robot::AutonomousInit() {
 }
 
 void Robot::AutonomousPeriodic() {
+    // All of these autos start with a preloaded cone and immediately score it
+    if(currentAutonomousState == "Mobile Cone" || currentAutonomousState == "Cone Cube - Balance" || 
+        currentAutonomousState == "Cone Cube"  || currentAutonomousState == "Far Cone Cube - Balance" ||
+        currentAutonomousState == "Far Triple Score") {
+        // TODO: Score the preloaded cone and return if we're still holding a cone
+    }
+
     const drive::AutonomousState trajectoryCompleted = drivetrain.FollowTrajectory();
     SmartDashboard::PutBoolean("bAtStopPoint", trajectoryCompleted.bAtStopPoint);
     SmartDashboard::PutBoolean("bCompletedPath", trajectoryCompleted.bCompletedPath);
@@ -54,8 +61,26 @@ void Robot::AutonomousPeriodic() {
     // By default, if the trajectory is completed, we might as well stop the drive train.
     bool bForceStop = trajectoryCompleted.bCompletedPath;
     if(trajectoryCompleted.bAtStopPoint) {
-        if(currentAutonomousState == "Test Path") {
-            
+        // All of these autos end up picking up the preloaded cube
+        if((currentAutonomousState == "Cone Cube" || currentAutonomousState == "Cone Cube - Balance") || 
+            (currentAutonomousState == "Far Cone Cube" || currentAutonomousState == "Far Cone Cube - Balance") ||
+            (currentAutonomousState == "Far Triple Score")) {
+            if(trajectoryCompleted.currentStopIndex == 1) {
+                // TODO: Pick up the staged cube
+            }
+
+            else if(trajectoryCompleted.currentStopIndex == 2) {
+                // TODO: Score the loaded cube
+            }
+        }
+
+        if(currentAutonomousState == "Far Triple Score") {
+            if(trajectoryCompleted.currentStopIndex == 3) {
+                // TODO: Pickup the staged cone
+            }
+            else if(trajectoryCompleted.currentStopIndex == 4) {
+                // TODO: Place the cone
+            }
         }
     }
 

@@ -29,13 +29,28 @@ class Robot : public frc::TimedRobot {
         void SimulationPeriodic() override;
 
     private:
-        frc::SendableChooser<std::string> m_chooser;
-        std::string currentAutonomousState;
         frc::Joystick drivecontroller { 0 };
+
+        /// @brief A sendable chooser / dropdown for selecting the current autonomous trajectory
+        frc::SendableChooser<std::string> m_chooser;
+
+        /// @brief A string representing the currently selected ""human"" trajectory name
+        std::string currentAutonomousState;
+
         drive::Drive drivetrain { &drivecontroller };
 
+        /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::map<std::string, std::string> mTrajectoryMap {
             { "Test Path", "Test Path" },
-            { "Cone Cube - Balance", "ConeCubeBalance" }
+
+            { "Mobile Cone", "MobileCone"},
+
+            { "Cone Cube - Balance", "ConeCubeBalance" },
+            { "Cone Cube", "ConeCubeNoBalance" },
+
+            { "Far Cone Cube - Balance", "FarConeCubeBalance"},
+            { "Far Cone Cube", "FarConeCubeNoBalance"},
+
+            { "Far Triple Score", "FarTripleScore"}
         };
 };

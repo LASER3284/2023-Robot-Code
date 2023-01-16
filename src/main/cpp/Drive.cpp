@@ -113,10 +113,10 @@ void drive::Drive::Tick() {
                 bForceAngle = true;
             }
         } else {
-            headingPIDController.Reset();
+            headingSnapPIDController.Reset();
         }
     } else if (fieldRelative) {
-        headingPIDController.Reset();
+        headingSnapPIDController.Reset();
     }
 
     frc::ChassisSpeeds nonrelspeeds = frc::ChassisSpeeds();
@@ -227,7 +227,7 @@ void drive::Drive::StartNextTrajectory() {
 }
 
 void drive::Drive::SetTrajectory(const std::string& pathName, bool resetPose) {
-    subpaths = PathPlanner::loadPathGroup(pathName, { { 4_mps, 3_mps_sq } });
+    subpaths = PathPlanner::loadPathGroup(pathName, { { 3.0_mps, 2.5_mps_sq } });
     currentStopPoint = -1;
     
     StartNextTrajectory();

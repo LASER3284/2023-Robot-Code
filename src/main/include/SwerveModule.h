@@ -34,10 +34,10 @@ namespace drive {
             double getDriveEncPos();
             void ResetEncoders();
 
-            static constexpr units::meters_per_second_t kMaxSpeed = 4.0_mps;
+            static constexpr units::meters_per_second_t kMaxSpeed = 16.2_mps;
             static constexpr units::radians_per_second_t kMaxAngularSpeed {
-                3.14159 * 2
-            };  // 1 rotation per second
+                3.14159 * 4
+            };  // 2 rotations per second
             
         private:
             static constexpr double kGearRatio = (6.86 / 1.0);
@@ -57,7 +57,7 @@ namespace drive {
             // TODO: Run drive-train characterization
             frc2::PIDController drivePIDController { 0.0001, 0.0, 0.0};
             frc2::PIDController turnPIDController {
-                0.010, // P: 0.011
+                0.009, // P: 0.011
                 0.000, // I: 0.000
                 0.000, // D: 0.000
             };

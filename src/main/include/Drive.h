@@ -79,8 +79,8 @@ namespace drive {
         private:
 
             // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
-            frc::SlewRateLimiter<units::scalar> xspeedLimiter { 3 / 1_s };
-            frc::SlewRateLimiter<units::scalar> yspeedLimiter { 3 / 1_s };
+            frc::SlewRateLimiter<units::scalar> xspeedLimiter { 2 / 1_s };
+            frc::SlewRateLimiter<units::scalar> yspeedLimiter { 2 / 1_s };
             frc::SlewRateLimiter<units::scalar> rotLimiter { 2 / 1_s };
 
             frc::Translation2d frontLeftLocation { +0.37465_m, +0.37465_m };
@@ -108,7 +108,7 @@ namespace drive {
             /// @brief Used to snap the robot to specific rotation angles based on the pose angle
             frc2::PIDController headingSnapPIDController { 4.250000, 0.0, 0.1250 };
 
-            AHRS gyro { frc::SerialPort::Port::kUSB };
+            AHRS gyro { frc::SerialPort::Port::kMXP };
 
             frc::SwerveDriveKinematics<4> kinematics {
                 frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation
