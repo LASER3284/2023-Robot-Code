@@ -23,9 +23,6 @@ void Robot::RobotInit() {
     m_chooser.SetDefaultOption("Test Path", "Test Path");
 
     frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
-
-    // Add in a boolean for field relative/oriented drive.
-    frc::SmartDashboard::PutBoolean("bFieldOriented", true);
 }
 
 /**

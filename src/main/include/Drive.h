@@ -8,7 +8,6 @@
 #include <frc/filter/SlewRateLimiter.h>
 #include <frc/kinematics/SwerveDriveOdometry.h>
 #include <frc/estimator/SwerveDrivePoseEstimator.h>
-#include <frc/StateSpaceUtil.h>
 #include <frc/geometry/Pose2d.h>
 #include <frc/geometry/Rotation2d.h>
 #include <frc/geometry/Translation2d.h>
@@ -37,8 +36,8 @@
 namespace drive {
     class Constants {
         public:
-            static constexpr units::meters_per_second_t maxTranslationalVelocity = 3.5_mps;
-            static constexpr units::radians_per_second_t maxRotationVelocity = 3.75_rad_per_s;
+            static constexpr units::meters_per_second_t  maxTranslationalVelocity = 4.93776_mps;
+            static constexpr units::radians_per_second_t maxRotationalVelocity = 180_deg_per_s;
 
             static constexpr double kTrajectoryX_P = 1.0;
             static constexpr double kTrajectoryX_I = 0.0;
@@ -77,24 +76,21 @@ namespace drive {
 
             void ForceStop();
         private:
+            frc::SlewRateLimiter<units::velocity::meters_per_second> xSpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.125_s };
+            frc::SlewRateLimiter<units::velocity::meters_per_second> ySpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.125_s };
 
-            // Slew rate limiters to make joystick inputs more gentle; 1/3 sec from 0 to 1.
-            frc::SlewRateLimiter<units::scalar> xspeedLimiter { 2 / 1_s };
-            frc::SlewRateLimiter<units::scalar> yspeedLimiter { 2 / 1_s };
-            frc::SlewRateLimiter<units::scalar> rotLimiter { 2 / 1_s };
-
-            frc::Translation2d frontLeftLocation { +0.37465_m, +0.37465_m };
-            frc::Translation2d frontRightLocation { +0.37465_m, -0.37465_m };
-            frc::Translation2d backLeftLocation { -0.37465_m, +0.37465_m };
-            frc::Translation2d backRightLocation { -0.37465_m, -0.37465_m };
+            frc::Translation2d frontLeftLocation { +0.277812_m, +0.277812_m };
+            frc::Translation2d frontRightLocation { +0.277812_m, -0.277812_m };
+            frc::Translation2d backLeftLocation { -0.277812_m, +0.277812_m };
+            frc::Translation2d backRightLocation { -0.277812_m, -0.277812_m };
         
             frc::Joystick* controller;
             bool is_joystickControl;
 
-            SwerveModule frontleft = SwerveModule(1, 2, 9, true);
-            SwerveModule frontright = SwerveModule(3, 4, 10, true);
-            SwerveModule backleft = SwerveModule(5, 6, 11, true);
-            SwerveModule backright = SwerveModule(7, 8, 12, true);
+            SwerveModule frontleft  = SwerveModule(10, 12, 16);
+            SwerveModule frontright = SwerveModule(14, 17, 3);
+            SwerveModule backleft   = SwerveModule(7,  8, 15);
+            SwerveModule backright  = SwerveModule(11, 13, 2);
 
             /// @brief Current heading for which to retain for holding straight lines / staying consistent
             frc::Rotation2d desiredHeading { 0_deg };
@@ -102,8 +98,11 @@ namespace drive {
             /// @brief Whether or not to keep the robot rotation heading controlled
             bool bProtectHeading = false;
 
+            /// @brief A timer used to control the heading protection
+            frc::Timer headingProtectionTimer;
+
             /// @brief A PID controller used to keep the robot held to a specific heading
-            frc2::PIDController headingPIDController { 0.0000001, 0, 0.0 };
+            frc2::PIDController headingPIDController { 4.25, 0.0, 0.0 };
             
             /// @brief Used to snap the robot to specific rotation angles based on the pose angle
             frc2::PIDController headingSnapPIDController { 4.250000, 0.0, 0.1250 };

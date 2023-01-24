@@ -65,13 +65,16 @@ void drive::SwerveModule::SetDesiredState(const frc::SwerveModuleState& refstate
 
     const auto driveff = driveFeedforward.Calculate(state.speed);    
     
-    // If we're not moving at <0.1x speed, then we can just give up on rotating
+    // If we're not moving at >1% speed, then we can just give up on rotating
     // This will help avoid jitter on the turn motors.
     double setpoint = state.angle.Degrees().value();
-    if(!force_angle && abs(state.speed.value()) < (SwerveModule::kMaxSpeed * 0.1).value()) {
+    if(!force_angle && abs(state.speed.value()) < (SwerveModule::kMaxSpeed * 0.01).value()) {
         setpoint = lastAngle.value();
     }
-
+    else {
+        lastAngle = state.angle.Degrees();
+    }
+    
     turnPIDController.SetSetpoint(setpoint);
     const auto turnOutput = turnPIDController.Calculate(encoder->GetAbsolutePosition());
 
@@ -87,8 +90,6 @@ void drive::SwerveModule::SetDesiredState(const frc::SwerveModuleState& refstate
     // If we aren't commanding the wheels to move at all, don't apply the feed forward or anything
     // Set the motor outputs.
     drivemotor->SetVoltage(units::volt_t{driveOutput} + driveff);
-    
-    lastAngle = state.angle.Degrees();
 }
 
 double drive::SwerveModule::getTurnEncPos() {

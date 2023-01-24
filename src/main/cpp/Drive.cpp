@@ -7,16 +7,20 @@ drive::Drive::Drive(frc::Joystick* controller_in) {
     gyro.Reset();
     
     headingPIDController.EnableContinuousInput(-constants::Pi, constants::Pi);
-    headingPIDController.SetTolerance(units::radian_t(2_deg).value());
-    
+
     headingSnapPIDController.EnableContinuousInput(-constants::Pi, constants::Pi);
     headingSnapPIDController.SetTolerance(units::radian_t(2_deg).value());
 
     frc::SmartDashboard::PutData("headingPIDController", &headingPIDController);
     frc::SmartDashboard::PutData("headingSnapPIDController", &headingSnapPIDController);
+
+    frc::SmartDashboard::PutBoolean("bFieldOriented", true);
+    frc::SmartDashboard::GetBoolean("bProtectHeading", true);
 }
 
 void drive::Drive::SetJoystick(bool state) {
+    headingProtectionTimer.Reset();
+    headingProtectionTimer.Start();
     is_joystickControl = state;
 }
 
@@ -26,46 +30,44 @@ void drive::Drive::Tick() {
     if(!is_joystickControl) return;
 
     bool fieldRelative = frc::SmartDashboard::GetBoolean("bFieldOriented", true);
-    if(controller->GetRawButtonReleased(constants::XboxButtons::eBack)) {
-        bProtectHeading = !bProtectHeading;
-        desiredHeading = poseEstimator.GetEstimatedPosition().Rotation();
-        frc::SmartDashboard::PutBoolean("bProtectHeading", bProtectHeading);
-    }
+    bProtectHeading = frc::SmartDashboard::GetBoolean("bProtectHeading", true);
 
     // Reset the gyro if the driver presses start.
     // This'll help avoid drift in field-oriented mode.
     if(controller->GetRawButtonReleased(constants::XboxButtons::eStart)) {
         gyro.Reset();
+
+        desiredHeading = gyro.GetRotation2d();
+        frc::SmartDashboard::PutNumber("desired_heading_rad", desiredHeading.Radians().value());
+        headingPIDController.Reset();
     }
 
-    double yAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eLeftAxisY), 0.15);
-    double xAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eLeftAxisX), 0.15);
-    double rAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eRightAxisX), 0.15);
+    double xAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eLeftAxisX), 0.10);
+    double yAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eLeftAxisY), 0.10);
+    double rAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eRightAxisX), 0.10);
 
-    if(controller->GetRawAxis(constants::XboxAxis::eRightTrigger) >= 0.25) {
-        double divisorAmount = (controller->GetRawAxis(constants::XboxAxis::eRightTrigger) - 0.25) * 4;
-        yAxis /= divisorAmount;
-        xAxis /= divisorAmount;
-        rAxis /= divisorAmount;
+    auto maxTranslationalVelocity = drive::Constants::maxTranslationalVelocity / 2;
+    auto maxRotationalVelocity = drive::Constants::maxRotationalVelocity;
+
+    if(controller->GetRawAxis(constants::XboxAxis::eRightTrigger) >= 0.10) {
+        double divisorAmount = wpi::Lerp<double>(1.0, 0.250, controller->GetRawAxis(constants::XboxAxis::eRightTrigger));
+        maxTranslationalVelocity *= divisorAmount;
+        maxRotationalVelocity *= divisorAmount;
+    }
+    else if(controller->GetRawAxis(constants::XboxAxis::eLeftTrigger) >= 0.10) {
+        double additionalAmount = wpi::Lerp<double>(1.0, 1.5, controller->GetRawAxis(constants::XboxAxis::eLeftTrigger));
+        maxTranslationalVelocity *= additionalAmount;
+        maxRotationalVelocity *= additionalAmount;
     }
 
     // These initial casts to meter_t are pretty much just to make the compiler happy. 
     // Once we multiply by the max speed is when we get the actual speed
-    frc::Translation2d translation = frc::Translation2d(units::meter_t(yAxis), units::meter_t(xAxis)) * SwerveModule::kMaxSpeed.value();
-
-    auto rotation = (rAxis * SwerveModule::kMaxAngularSpeed);
-
-    if(bProtectHeading) {
-        double angleAdjustment = headingPIDController.Calculate(
-            gyro.GetRotation2d().Radians().value(),
-            desiredHeading.Radians().value()
-        );
-
-        rotation *= angleAdjustment;
-    }
-
+    frc::Translation2d translation = frc::Translation2d(units::meter_t(yAxis), units::meter_t(xAxis)) * maxTranslationalVelocity.value();
+    auto rotation = rAxis * maxRotationalVelocity;
 
     bool bForceAngle = false;
+
+    frc::SmartDashboard::PutNumber("curr_angle_rad", frc::AngleModulus(gyro.GetRotation2d().Radians()).value());
 
     // If you are field relative and hold RB, snap the robot itself to the nearest 45deg angle based on the right joystick
     if(fieldRelative && controller->GetRawButton(constants::XboxButtons::eButtonRB)) {
@@ -88,12 +90,8 @@ void drive::Drive::Tick() {
             const units::degree_t snap_angle = 45_deg;
             const units::radian_t snap = frc::AngleModulus(units::degree_t(round((units::degree_t(p) / snap_angle).value()) * snap_angle.value()));
 
-            frc::SmartDashboard::PutNumber("controllerX", controllerX);
-            frc::SmartDashboard::PutNumber("controllerY", controllerY);
-
             frc::SmartDashboard::PutNumber("snap_angle_deg", units::degree_t(snap).value());
             frc::SmartDashboard::PutNumber("snap_angle_rad", snap.value());
-            frc::SmartDashboard::PutNumber("curr_angle_rad", frc::AngleModulus(gyro.GetRotation2d().Radians()).value());
             
             // Use the PID controller to calculate our angular velocity from the given angle (measurement) & snap point (setpoint)
             const units::radians_per_second_t new_rotation =  units::radians_per_second_t(
@@ -119,21 +117,53 @@ void drive::Drive::Tick() {
         headingSnapPIDController.Reset();
     }
 
+    if(bProtectHeading) {
+        frc::SmartDashboard::PutNumber("headingProtectionTimer_s", headingProtectionTimer.Get().value());
+
+        // If we're not touching the joystick, try and keep with the current heading unless we were massively offset
+        if(rotation == 0_rad_per_s) {
+            if(!headingProtectionTimer.HasElapsed(0.85_s)) {
+                desiredHeading = gyro.GetRotation2d();
+                frc::SmartDashboard::PutNumber("desired_heading_rad", desiredHeading.Radians().value());
+                headingPIDController.Reset();
+            }
+
+            // If we're >5 deg offset from the initial heading, don't even bother trying to maintain the current heading
+            if(headingProtectionTimer.HasElapsed(0.85_s) && units::math::abs((gyro.GetRotation2d() - desiredHeading).Radians()) <= 5_deg) {
+                units::radians_per_second_t angleAdjustment = units::radians_per_second_t(headingPIDController.Calculate(
+                    frc::AngleModulus(gyro.GetRotation2d().Radians()).value(),
+                    frc::AngleModulus(desiredHeading.Radians()).value()
+                ));
+
+                rotation = angleAdjustment;
+            }
+        }
+        // If we are touching the joystick, set the desired heading to the current heading
+        else {
+            headingProtectionTimer.Reset();
+            headingProtectionTimer.Start();
+        }
+    }
+
+    auto xVelocity = xSpeedLimiter.Calculate(translation.X() / 1_s);
+    auto yVelocity = ySpeedLimiter.Calculate(translation.Y() / 1_s);
+
     frc::ChassisSpeeds nonrelspeeds = frc::ChassisSpeeds();
     nonrelspeeds.omega = rotation;
-    nonrelspeeds.vx = translation.X() / 1_s;
-    nonrelspeeds.vy = translation.Y() / 1_s;
+    nonrelspeeds.vx = xVelocity;
+    nonrelspeeds.vy = yVelocity;
 
-    const auto relspeeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
-        translation.X() / 1_s,
-        translation.Y() / 1_s,
-        rotation, 
+    auto relspeeds = frc::ChassisSpeeds::FromFieldRelativeSpeeds(
+        xVelocity,
+        yVelocity,
+        rotation,
         gyro.GetRotation2d()
     );
 
     wpi::array<frc::SwerveModuleState, 4> states = kinematics.ToSwerveModuleStates(fieldRelative ? relspeeds : nonrelspeeds);
 
-    bool bXPattern = (controller->GetRawAxis(constants::XboxAxis::eLeftTrigger) >= 0.75);
+    bool bXPattern = controller->GetRawButton(constants::XboxButtons::eButtonLB);
+    frc::SmartDashboard::PutBoolean("bXPattern", bXPattern);
     if(bXPattern) {
         bForceAngle = true;
 
@@ -144,16 +174,19 @@ void drive::Drive::Tick() {
             frc::SwerveModuleState { 0_mps, frc::Rotation2d(225_deg) },
         };
     }
-    else {
-        kinematics.DesaturateWheelSpeeds(
-            &states, 
-            fieldRelative ? relspeeds : nonrelspeeds, 
-            SwerveModule::kMaxSpeed, 
-            drive::Constants::maxTranslationalVelocity, 
-            drive::Constants::maxRotationVelocity
-        );
+
+    kinematics.DesaturateWheelSpeeds(
+        &states, 
+        fieldRelative ? relspeeds : nonrelspeeds, 
+        SwerveModule::kMaxSpeed, 
+        maxTranslationalVelocity, 
+        maxRotationalVelocity
+    );
+
+    if(xAxis <= 0.20 || yAxis <= 0.20) {
+        bForceAngle = true;
     }
-    
+
     auto [fl, fr, bl, br] = states;
 
     frontleft.SetDesiredState(fl, bForceAngle);

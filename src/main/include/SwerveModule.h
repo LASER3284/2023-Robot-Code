@@ -34,11 +34,7 @@ namespace drive {
             double getDriveEncPos();
             void ResetEncoders();
 
-            static constexpr units::meters_per_second_t kMaxSpeed = 16.2_mps;
-            static constexpr units::radians_per_second_t kMaxAngularSpeed {
-                3.14159 * 4
-            };  // 2 rotations per second
-            
+            static constexpr units::meters_per_second_t kMaxSpeed = 4.93776_mps;
         private:
             static constexpr double kGearRatio = (6.86 / 1.0);
             static constexpr units::meter_t kWheelDiameter = 0.1016_m;

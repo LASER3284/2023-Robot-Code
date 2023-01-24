@@ -3,6 +3,10 @@
     "C_Cpp.intelliSenseEngineFallback": "enabled",
     "files.associations": {
         "*.inc": "cpp",
-        "cmath": "cpp"
+        "cmath": "cpp",
+        "chrono": "cpp",
+        "random": "cpp",
+        "limits": "cpp",
+        "semaphore": "cpp"
     }
 }
