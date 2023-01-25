@@ -7,6 +7,7 @@
 #include <string>
 #include "SwerveModule.h"
 #include "Drive.h"
+#include "Lights.h"
 
 #include <frc/TimedRobot.h>
 #include <frc/smartdashboard/SendableChooser.h>
@@ -37,7 +38,11 @@ class Robot : public frc::TimedRobot {
         /// @brief A string representing the currently selected ""human"" trajectory name
         std::string currentAutonomousState;
 
+        /// @brief The subsystem for handling all of the swerve drive train tasks
         drive::Drive drivetrain { &drivecontroller };
+
+        /// @brief A basic subsystem for handling the WS128b LED strips
+        lights::LightHandler lighthandler;
 
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::map<std::string, std::string> mTrajectoryMap {

@@ -47,7 +47,7 @@ void drive::Drive::Tick() {
     double rAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eRightAxisX), 0.10);
 
     auto maxTranslationalVelocity = drive::Constants::maxTranslationalVelocity / 2;
-    auto maxRotationalVelocity = drive::Constants::maxRotationalVelocity;
+    auto maxRotationalVelocity = drive::Constants::maxRotationalVelocity / 2;
 
     if(controller->GetRawAxis(constants::XboxAxis::eRightTrigger) >= 0.10) {
         double divisorAmount = wpi::Lerp<double>(1.0, 0.250, controller->GetRawAxis(constants::XboxAxis::eRightTrigger));
@@ -55,7 +55,7 @@ void drive::Drive::Tick() {
         maxRotationalVelocity *= divisorAmount;
     }
     else if(controller->GetRawAxis(constants::XboxAxis::eLeftTrigger) >= 0.10) {
-        double additionalAmount = wpi::Lerp<double>(1.0, 1.5, controller->GetRawAxis(constants::XboxAxis::eLeftTrigger));
+        double additionalAmount = wpi::Lerp<double>(1.0, 2.0, controller->GetRawAxis(constants::XboxAxis::eLeftTrigger));
         maxTranslationalVelocity *= additionalAmount;
         maxRotationalVelocity *= additionalAmount;
     }
@@ -183,6 +183,7 @@ void drive::Drive::Tick() {
         maxRotationalVelocity
     );
 
+    // If we're driving at a slow speed (but commanded by a ""large"" joystick value, force the angle)
     if(xAxis <= 0.20 || yAxis <= 0.20) {
         bForceAngle = true;
     }

@@ -37,7 +37,7 @@ namespace drive {
     class Constants {
         public:
             static constexpr units::meters_per_second_t  maxTranslationalVelocity = 4.93776_mps;
-            static constexpr units::radians_per_second_t maxRotationalVelocity = 180_deg_per_s;
+            static constexpr units::radians_per_second_t maxRotationalVelocity = 700_deg_per_s;
 
             static constexpr double kTrajectoryX_P = 1.0;
             static constexpr double kTrajectoryX_I = 0.0;
@@ -76,8 +76,8 @@ namespace drive {
 
             void ForceStop();
         private:
-            frc::SlewRateLimiter<units::velocity::meters_per_second> xSpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.125_s };
-            frc::SlewRateLimiter<units::velocity::meters_per_second> ySpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.125_s };
+            frc::SlewRateLimiter<units::velocity::meters_per_second> xSpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.0625_s };
+            frc::SlewRateLimiter<units::velocity::meters_per_second> ySpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.0625_s };
 
             frc::Translation2d frontLeftLocation { +0.277812_m, +0.277812_m };
             frc::Translation2d frontRightLocation { +0.277812_m, -0.277812_m };

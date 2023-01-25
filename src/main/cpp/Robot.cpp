@@ -43,7 +43,7 @@ void Robot::AutonomousInit() {
     drivetrain.SetTrajectory(currentAutonomousState, true);
 }
 
-void Robot::AutonomousPeriodic() {
+void Robot::AutonomousPeriodic() {    
     // All of these autos start with a preloaded cone and immediately score it
     if(currentAutonomousState == "Mobile Cone" || currentAutonomousState == "Cone Cube - Balance" || 
         currentAutonomousState == "Cone Cube"  || currentAutonomousState == "Far Cone Cube - Balance" ||
@@ -88,6 +88,7 @@ void Robot::AutonomousPeriodic() {
 }
 
 void Robot::TeleopInit() {
+    lighthandler.SetColor(frc::Color::kPurple);
     drivetrain.SetJoystick(true);
 }
 
@@ -97,7 +98,9 @@ void Robot::TeleopPeriodic() {
 
 void Robot::DisabledInit() {}
 
-void Robot::DisabledPeriodic() {}
+void Robot::DisabledPeriodic() {
+    lighthandler.Rainbow();
+}
 
 void Robot::TestInit() {
     drivetrain.SetJoystick(false);
