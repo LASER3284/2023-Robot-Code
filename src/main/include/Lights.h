@@ -13,9 +13,9 @@ namespace lights {
     class LightHandler {
         public:
             LightHandler() {
-                m_led.SetLength(Constants::kStringLength);
-                m_led.SetData(m_ledBuffer);
-                m_led.Start();
+                ledStrip.SetLength(Constants::kStringLength);
+                ledStrip.SetData(ledBuffer);
+                ledStrip.Start();
             }
 
             /// @brief Set the value of the LED pixel at the given index
@@ -24,8 +24,8 @@ namespace lights {
             /// @param b Blue (between 0 and 255)
             /// @param index 
             void SetColor(int r, int g, int b, int index) {
-                m_ledBuffer[index].SetRGB(r, g, b);
-                m_led.SetData(m_ledBuffer);
+                ledBuffer[index].SetRGB(r, g, b);
+                ledStrip.SetData(ledBuffer);
             }
 
             /// @brief Sets the color of the whole LED strip
@@ -34,9 +34,9 @@ namespace lights {
             /// @param b Blue (between 0 and 255)
             void SetColor(int r, int g, int b) {
                 for(int i = 0; i < Constants::kStringLength; i++) {
-                    m_ledBuffer[i].SetRGB(r, g, b);
+                    ledBuffer[i].SetRGB(r, g, b);
                 }
-                m_led.SetData(m_ledBuffer);
+                ledStrip.SetData(ledBuffer);
             }
 
             /// @brief Sets the color of the whole LED strip
@@ -56,7 +56,7 @@ namespace lights {
                 for(int i = 0; i < Constants::kStringLength; i++) {
                     const auto pixelHue = (firstPixelHue + (i * 180 / Constants::kStringLength)) % 180;
 
-                    m_ledBuffer[i].SetHSV(pixelHue, 255, 128);
+                    ledBuffer[i].SetHSV(pixelHue, 255, 128);
                 }
                 
                 // Increase by to make the rainbow "move"
@@ -65,12 +65,12 @@ namespace lights {
                 // Check bounds
                 firstPixelHue %= 180;
 
-                m_led.SetData(m_ledBuffer);
+                ledStrip.SetData(ledBuffer);
             }
 
         private:
-            frc::AddressableLED m_led { 0 };
-            std::array<frc::AddressableLED::LEDData, Constants::kStringLength> m_ledBuffer;
+            frc::AddressableLED ledStrip { 0 };
+            std::array<frc::AddressableLED::LEDData, Constants::kStringLength> ledBuffer;
 
             int firstPixelHue = 0;
     };
