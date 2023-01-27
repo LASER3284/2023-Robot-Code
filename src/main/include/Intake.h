@@ -6,7 +6,8 @@
 
 namespace intake {
     class Constants {
-        static constexpr int kIntakeID = 10;
+        public:
+            static constexpr int kIntakeID = 10;
     };
 
     class Intake {
@@ -22,7 +23,7 @@ namespace intake {
             // TODO: Implement
             bool HasElement();
         private:
-            rev::CANSparkMax intakeMotor { kIntakeID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };  
+            rev::CANSparkMax intakeMotor { Constants::kIntakeID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };  
     };
     
 }

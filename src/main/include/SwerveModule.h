@@ -19,7 +19,6 @@
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/geometry/Rotation2d.h>
 #include <rev/CANSparkMax.h>
-#include "frc/geometry/Rotation2d.h"
 #include "Constants.h"
 
 namespace drive {
