@@ -29,9 +29,15 @@ namespace shoulder {
             void Tick();
 
             /// @brief Gets the current rotation of the shoulder
+            ///
+            /// The rotation is 0 degrees parallel to the bottom of the frame.
+            /// @return The current rotation of the shoulder in units::degree_t.
             units::degree_t GetRotation();
 
             /// @brief Sets the current goal for the shoulder angle
+            ///
+            /// The rotation is 0 degrees parallel to the bottom of the frame.
+            /// @param rot The rotation goal to use for the profiled PID controller.
             void SetRotationGoal(units::degree_t rot);
 
         private:

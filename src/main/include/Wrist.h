@@ -27,13 +27,26 @@ namespace wrist {
 
     class Wrist {
         public:
+            /// @brief Constructor for the Wrist class, which also acts to initialize the class.
             Wrist();
+            
+            /// @brief Calculates the percent output to set the motor to based on the angle of the wrist.
             void Tick();
+            
+            /// @brief Returns the rotation of the output shaft.
+            /// @return Rotation of output shaft, 0 degrees is parallel to the bottom of the frame.
             units::degree_t GetRotation();
+            
+            /// @brief Sets the rotation goal for the profiled PID controller.
+            ///
+            /// Rotation should be 0 degrees parallel to the bottom of the frame in CCW+ orientation.
+            /// @param rot The rotation goal to set the profiled PID controller to calculate against.
             void SetRotationGoal(units::degree_t rot);
         private:
             rev::CANSparkMax motor { Constants::kWristMotorID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
+
             ctre::phoenix::sensors::CANCoder encoder { Constants::kWristEncoderID };
+            
             frc::ProfiledPIDController<units::degree> controller {
                 0.0,    // kP
                 0.0,    // kI
