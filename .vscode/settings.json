@@ -8,6 +8,7 @@
         "random": "cpp",
         "limits": "cpp",
         "semaphore": "cpp",
-        "array": "cpp"
+        "array": "cpp",
+        "span": "cpp"
     }
 }
