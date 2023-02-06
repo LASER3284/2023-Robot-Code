@@ -44,6 +44,8 @@ void Robot::AutonomousInit() {
 }
 
 void Robot::AutonomousPeriodic() {    
+    drivetrain.Tick();
+
     // All of these autos start with a preloaded cone and immediately score it
     if(currentAutonomousState == "Mobile Cone" || currentAutonomousState == "Cone Cube - Balance" || 
         currentAutonomousState == "Cone Cube"  || currentAutonomousState == "Far Cone Cube - Balance" ||
@@ -70,8 +72,7 @@ void Robot::AutonomousPeriodic() {
                 // TODO: Score the loaded cube
             }
         }
-
-        if(currentAutonomousState == "Far Triple Score") {
+        else if(currentAutonomousState == "Far Triple Score") {
             if(trajectoryCompleted.currentStopIndex == 3) {
                 // TODO: Pickup the staged cone
             }
@@ -88,15 +89,38 @@ void Robot::AutonomousPeriodic() {
 }
 
 void Robot::TeleopInit() {
-    lighthandler.SetColor(frc::Color::kPurple);
+    lighthandler.SetColor(frc::Color::kOrange);
     drivetrain.SetJoystick(true);
 }
 
 void Robot::TeleopPeriodic() {
     drivetrain.Tick();
+
+    const auto currentRobotPose = drivetrain.GetPose();
+
+    // Iterate over all of the grid locations in order to determine what grid that the robot is currently in
+    int currentGrid = 0;
+    for(const auto &gridLocations : fieldConstants.gridLocations) {
+        const auto bottomLeft = std::get<0>(gridLocations);
+        const auto topRight = std::get<1>(gridLocations);
+
+        if((currentRobotPose.X() >= bottomLeft.X() && currentRobotPose.X() <= topRight.X()) && (currentRobotPose.Y() >= bottomLeft.Y() && currentRobotPose.Y() <= topRight.Y())) {
+            break;
+        }
+        
+        // Move onto the next grid if we aren't in the right one
+        currentGrid++;
+    }
+
+    SmartDashboard::PutNumber("currentGrid", currentGrid);
+
+    // TODO: Implement automatic scoring
 }
 
-void Robot::DisabledInit() {}
+void Robot::DisabledInit() {
+    // For easier testing, when the robot first gets disabled, reinitialize the field constants (since it can change due to alliance color)
+    fieldConstants.Initialize();
+}
 
 void Robot::DisabledPeriodic() {
     lighthandler.Rainbow();

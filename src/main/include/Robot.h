@@ -4,13 +4,15 @@
 
 #pragma once
 
+#include <frc/TimedRobot.h>
+#include <frc/smartdashboard/SendableChooser.h>
 #include <string>
+#include <tuple>
+
+#include "FieldConstants.h"
 #include "SwerveModule.h"
 #include "Drive.h"
 #include "Lights.h"
-
-#include <frc/TimedRobot.h>
-#include <frc/smartdashboard/SendableChooser.h>
 
 class Robot : public frc::TimedRobot {
     public:
@@ -58,4 +60,7 @@ class Robot : public frc::TimedRobot {
 
             { "Far Triple Score", "FarTripleScore"}
         };
+
+        /// @brief An object that represents the locations of all the field elements
+        constants::FieldConstants fieldConstants;
 };

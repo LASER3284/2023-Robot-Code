@@ -21,7 +21,7 @@
 #include <pathplanner/lib/commands/PPSwerveControllerCommand.h>
 #include <photonlib/PhotonCamera.h>
 #include <photonlib/RobotPoseEstimator.h>
-
+#include <frc/smartdashboard/Field2d.h>
 #include <AHRS.h>
 
 #include <memory>
@@ -39,15 +39,15 @@ namespace drive {
             static constexpr units::meters_per_second_t  maxTranslationalVelocity = 4.93776_mps;
             static constexpr units::radians_per_second_t maxRotationalVelocity = 700_deg_per_s;
 
-            static constexpr double kTrajectoryX_P = 1.0;
+            static constexpr double kTrajectoryX_P = 7.25;
             static constexpr double kTrajectoryX_I = 0.0;
             static constexpr double kTrajectoryX_D = 0.0;
 
-            static constexpr double kTrajectoryY_P = 1.0;
+            static constexpr double kTrajectoryY_P = 7.25;
             static constexpr double kTrajectoryY_I = 0.0;
             static constexpr double kTrajectoryY_D = 0.0;
 
-            static constexpr double kTrajectoryTheta_P = 1.0;
+            static constexpr double kTrajectoryTheta_P = 7.25;
             static constexpr double kTrajectoryTheta_I = 0.0;
             static constexpr double kTrajectoryTheta_D = 0.0;
     };
@@ -133,6 +133,9 @@ namespace drive {
                 { frontleft.GetPosition(), frontright.GetPosition(), backleft.GetPosition(), backright.GetPosition() },
                 frc::Pose2d {}
             );
+
+            /// @brief An object representing the field for displaying the robot pose from the poseEstimator
+            frc::Field2d field;
 
             /// @brief A list/vector holding all of the paths to follow, each subpath is separated by the given stop point
             std::vector<pathplanner::PathPlannerTrajectory> subpaths;

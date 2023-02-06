@@ -16,6 +16,8 @@ drive::Drive::Drive(frc::Joystick* controller_in) {
 
     frc::SmartDashboard::PutBoolean("bFieldOriented", true);
     frc::SmartDashboard::GetBoolean("bProtectHeading", true);
+
+    frc::SmartDashboard::PutData("field", &field);
 }
 
 void drive::Drive::SetJoystick(bool state) {
@@ -261,13 +263,12 @@ void drive::Drive::StartNextTrajectory() {
 }
 
 void drive::Drive::SetTrajectory(const std::string& pathName, bool resetPose) {
-    subpaths = PathPlanner::loadPathGroup(pathName, { { 3.0_mps, 2.5_mps_sq } });
+    subpaths = PathPlanner::loadPathGroup(pathName, { { 3.0_mps, 3.0_mps_sq } });
     currentStopPoint = -1;
     
     StartNextTrajectory();
 
     if(resetPose) {
-        ResetOdometry();
         poseEstimator.ResetPosition(
             gyro.GetRotation2d(),
             { frontleft.GetPosition(), frontright.GetPosition(), backleft.GetPosition(), backright.GetPosition() },
@@ -295,6 +296,8 @@ void drive::Drive::UpdateOdometry() {
         units::millisecond_t timestamp = (currentTime - result.second);
         poseEstimator.AddVisionMeasurement(result.first.ToPose2d(), timestamp);
     }
+
+    field.SetRobotPose(poseEstimator.GetEstimatedPosition());
 }
 
 void drive::Drive::ForceStop() {

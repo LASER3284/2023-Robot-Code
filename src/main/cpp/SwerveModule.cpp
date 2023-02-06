@@ -87,9 +87,8 @@ void drive::SwerveModule::SetDesiredState(const frc::SwerveModuleState& refstate
         turnmotor->Set(0.0);
     }
 
-    // If we aren't commanding the wheels to move at all, don't apply the feed forward or anything
     // Set the motor outputs.
-    drivemotor->SetVoltage(units::volt_t{driveOutput} + driveff);
+    drivemotor->SetVoltage(units::volt_t{ driveOutput } + driveff);
 }
 
 double drive::SwerveModule::getTurnEncPos() {

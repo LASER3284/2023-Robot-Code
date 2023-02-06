@@ -50,7 +50,7 @@ namespace drive {
             ctre::phoenix::sensors::CANCoder*               encoder;
 
             // TODO: Run drive-train characterization
-            frc2::PIDController drivePIDController { 0.0001, 0.0, 0.0};
+            frc2::PIDController drivePIDController { 0.00038489, 0.0, 0.0};
             frc2::PIDController turnPIDController {
                 0.009, // P: 0.011
                 0.000, // I: 0.000
@@ -58,9 +58,9 @@ namespace drive {
             };
 
             frc::SimpleMotorFeedforward<units::meters> driveFeedforward { 
-                0.32_V,                      // kS
-                1.51 * 1_V * 1_s / 1_m,      // kV
-                0.27 * 1_V * 1_s * 1_s / 1_m // kA
+                0.17827_V,                      // kS
+                2.166 * 1_V * 1_s / 1_m,      // kV
+                0.18284 * 1_V * 1_s * 1_s / 1_m // kA
             };
 
             units::degree_t lastAngle = 0_deg;

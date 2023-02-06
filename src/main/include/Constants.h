@@ -34,7 +34,7 @@ namespace constants {
     }
 
     static units::meter_t falconToMeters(double position, units::meter_t circumference, double gearRatio) {
-        double m = position* (circumference.value() / (gearRatio * 2048));
+        double m = position * (circumference.value() / (gearRatio * 2048));
         return units::meter_t(m);
     }
 }
