@@ -13,6 +13,12 @@
 #include "SwerveModule.h"
 #include "Drive.h"
 #include "Lights.h"
+#include "Shoulder.h"
+#include "Intake.h"
+#include "Arm.h"
+#include "Wrist.h"
+#include <rev/CANSparkMaxLowLevel.h>
+#include <deque>
 
 class Robot : public frc::TimedRobot {
     public:
@@ -32,7 +38,9 @@ class Robot : public frc::TimedRobot {
         void SimulationPeriodic() override;
 
     private:
-        frc::Joystick drivecontroller { 0 };
+        frc::Joystick driveController { 0 };
+
+        frc::Joystick auxController { 2 };
 
         /// @brief A sendable chooser / dropdown for selecting the current autonomous trajectory
         frc::SendableChooser<std::string> m_chooser;
@@ -41,10 +49,22 @@ class Robot : public frc::TimedRobot {
         std::string currentAutonomousState;
 
         /// @brief The subsystem for handling all of the swerve drive train tasks
-        drive::Drive drivetrain { &drivecontroller };
+        drive::Drive drivetrain { &driveController };
 
         /// @brief A basic subsystem for handling the WS128b LED strips
         lights::LightHandler lighthandler;
+
+        /// @brief The subsystem for handling/controlling shoulder movements
+        shoulder::Shoulder shoulder;
+
+        /// @brief The subsystem for handling/controlling arm extensions
+        arm::Arm arm;
+
+        /// @brief The system that handles the intake and whether it is cone or cube.
+        intake::Intake intake;
+
+        /// @brief The subsystem that handles wrist motion/controls
+        wrist::Wrist wrist;
 
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::map<std::string, std::string> mTrajectoryMap {
@@ -63,4 +83,10 @@ class Robot : public frc::TimedRobot {
 
         /// @brief An object that represents the locations of all the field elements
         constants::FieldConstants fieldConstants;
+
+        /// @brief A timer object used to track delays between button board presses
+        frc::Timer buttonTimer;
+
+        /// @brief What button was previously pressed
+        std::deque<constants::ButtonBoardButtons> previousButtons;
 };

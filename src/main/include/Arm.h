@@ -3,14 +3,19 @@
 #include <units/length.h>
 #include <frc/controller/ProfiledPIDController.h>
 #include <units/velocity.h>
+#include <frc/smartdashboard/SmartDashboard.h>
 
 namespace arm {
     class Constants{
-        public: 
-            static constexpr int kArmCANID = 9999;
+        public:
+            /// @brief The CAN ID for the Spark Max for extending the arm
+            static constexpr int kArmCANID = 19;
 
-            ///@brief the arm gear ratio
-            static constexpr double kArmRatio = 7000/1;
+            /// @brief The gear ratio for the arm (sprockets are 1 to 1)
+            static constexpr double kArmRatio = 27.78/1;
+
+            /// @brief The outer diameter of the sprocket * pi in order to convert to linear units
+            static constexpr units::meter_t kSprocketDiameter = (0.0381762_m * constants::Pi);
     };
 
     class Arm {
@@ -23,10 +28,17 @@ namespace arm {
 
             void Tick();
 
-        private:
-            rev::CANSparkMax extentionMotor { Constants::kArmCANID, rev::CANSparkMaxLowLevel::MotorType::kBrushless};
+            void ToggleControl(bool enable) { bEnabled = enable; }
 
-        frc::ProfiledPIDController<units::meter> positionController { 
+            void ManualControl(double percentage) { manualPercentage = percentage; }
+        private:
+            bool bEnabled = false;
+            double manualPercentage = 0.0;
+
+            rev::CANSparkMax extensionMotor { Constants::kArmCANID, rev::CANSparkMaxLowLevel::MotorType::kBrushless};
+            rev::SparkMaxRelativeEncoder extensionEncoder = extensionMotor.GetEncoder();
+
+            frc::ProfiledPIDController<units::meter> positionController { 
                 0.0, // kP
                 0.0, // kI
                 0.0, // kD
@@ -35,8 +47,4 @@ namespace arm {
             };
 
     };
-
-
-
-
 }

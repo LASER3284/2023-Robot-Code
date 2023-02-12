@@ -1,5 +1,3 @@
-// this code is to create the classes for the intake and crate the numatc controls of the intake 
-#include "Robot.h"
 #include "Constants.h"
 
 #include <rev/CANSparkMax.h>
@@ -9,8 +7,14 @@
 namespace intake {
     class Constants {
         public:
-            static constexpr int kIntakeID = 10;
-        
+            /// @brief The CAN ID for the intake motor
+            static constexpr int kIntakeID = 60;
+
+            /// @brief The solenoid port/ID for the intake
+            static constexpr int kIntakeSolenoidID1 = 6;
+
+            /// @brief The solenoid port/ID for the intake mode
+            static constexpr int kIntakeSolenoidID2 = 7;
     };
 
     class Intake {
@@ -23,20 +27,18 @@ namespace intake {
             void Inhale();
             void Spit();
 
+            void Stop();
+
             units::ampere_t GetFilteredCurrent() {
-                return highPass.Calculate(movingAverage.Calculate(units::ampere_t{intakeMotor.GetOutputCurrent()}));
+                return movingAverage.Calculate( units::ampere_t{ intakeMotor.GetOutputCurrent() });
             }
 
-
-            // TODO: Implement
             bool HasElement();
         private:
             rev::CANSparkMax intakeMotor { Constants::kIntakeID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
-            frc::Solenoid intakeSolenoid1 { frc::PneumaticsModuleType::REVPH, 1 };
-            frc::Solenoid intakeSolenoid2 { frc::PneumaticsModuleType::REVPH, 2 };
+            frc::Solenoid intakeSolenoid1 { frc::PneumaticsModuleType::REVPH, Constants::kIntakeSolenoidID1 };
+            frc::Solenoid intakeSolenoid2 { frc::PneumaticsModuleType::REVPH, Constants::kIntakeSolenoidID2 };
 
-            frc::LinearFilter<units::ampere_t> movingAverage = frc::LinearFilter<units::ampere_t>::MovingAverage(8);
-            frc::LinearFilter<units::ampere_t> highPass = frc::LinearFilter<units::ampere_t>::HighPass(0.5, 0.02_s);
-
+            frc::LinearFilter<units::ampere_t> movingAverage = frc::LinearFilter<units::ampere_t>::MovingAverage(4);
     };
 }

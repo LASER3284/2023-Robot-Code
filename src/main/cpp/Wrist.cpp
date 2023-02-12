@@ -1,21 +1,21 @@
 #include "Wrist.h"
 
-using namespace ctre::phoenix;
-
 wrist::Wrist::Wrist() {
-    motor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
-    motor.SetSmartCurrentLimit(25);
-
-    encoder.ConfigAbsoluteSensorRange(sensors::AbsoluteSensorRange::Signed_PlusMinus180);
-    encoder.ConfigSensorInitializationStrategy(sensors::SensorInitializationStrategy::BootToAbsolutePosition);
+    wristMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
+    wristMotor.SetSmartCurrentLimit(25);
 }
 
 void wrist::Wrist::Tick() {
-    motor.Set(
-        controller.Calculate(
-            units::degree_t{encoder.GetAbsolutePosition()}
-        )
-    );
+    frc::SmartDashboard::PutNumber("wrist_angle", GetRotation().value());
+    if(manualPercentage != 0) {
+        wristMotor.SetVoltage(
+            (manualPercentage * 12_V) + 0.2_V
+        );
+    }
+    else {
+        // TODO: Implement basic feedforward calculations and add PID controls
+        wristMotor.SetVoltage(0.2_V);
+    }
 }
 
 void wrist::Wrist::SetRotationGoal(units::degree_t rot) {
@@ -23,5 +23,5 @@ void wrist::Wrist::SetRotationGoal(units::degree_t rot) {
 }
 
 units::degree_t wrist::Wrist::GetRotation() {
-    return units::degree_t{encoder.GetAbsolutePosition()};
+    return units::degree_t { (wristEncoder.GetPosition() / Constants::kWristGearRatio) };
 }

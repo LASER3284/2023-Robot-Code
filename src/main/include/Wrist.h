@@ -6,23 +6,20 @@
 #include <ctre/phoenix/sensors/CANCoder.h>
 #include <rev/CANSparkMax.h>
 #include <frc/controller/ProfiledPIDController.h>
+#include <frc/smartdashboard/SmartDashboard.h>
 
 namespace wrist {
 
     class Constants {
         public:
             /// @brief The CAN ID of the SparkMAX to use for the NEO 550 on the wrist.
-            /// @warning Value set to 999 because real value is unknown.
-            static constexpr int kWristMotorID = 999;
-
-            /// @brief The CAN ID of the CANCoder to use for rotation of the wrist.
-            /// @warning Value set to 998 because real value is unknown.
-            static constexpr int kWristEncoderID = 998;
+            static constexpr int kWristMotorID = 56;
 
             /// @brief The gear ratio from the NEO 550 to the output of the wrist.
-            /// @warning This value DOES NOT include the pulley ratio.
-            /// @todo Find pulley ratio and include it.
-            static constexpr double kWristGearRatio = 90 / 1;
+            static constexpr double kWristGearRatio = (90 / 1) * ( (24 / 36) / 1);
+
+            /// @brief The starting angle for the wrist
+            static constexpr units::degree_t kStartingAngle = 0_deg;
     };
 
     class Wrist {
@@ -42,11 +39,13 @@ namespace wrist {
             /// Rotation should be 0 degrees parallel to the bottom of the frame in CCW+ orientation.
             /// @param rot The rotation goal to set the profiled PID controller to calculate against.
             void SetRotationGoal(units::degree_t rot);
-        private:
-            rev::CANSparkMax motor { Constants::kWristMotorID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
 
-            ctre::phoenix::sensors::CANCoder encoder { Constants::kWristEncoderID };
-            
+            /// @brief Manually control the rotation of the wrist
+            void ManualControl(double percentage) { manualPercentage = percentage; }
+        private:
+            rev::CANSparkMax wristMotor { Constants::kWristMotorID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
+            rev::SparkMaxRelativeEncoder wristEncoder = wristMotor.GetEncoder();
+
             frc::ProfiledPIDController<units::degree> controller {
                 0.0,    // kP
                 0.0,    // kI
@@ -54,6 +53,8 @@ namespace wrist {
                 // Trapezoidal profile for the constraints that we're looking for
                 frc::TrapezoidProfile<units::degree>::Constraints { 1_deg_per_s, 1_deg_per_s / 1_s }
             };
+
+            double manualPercentage = 0.0;
     };
 
 }

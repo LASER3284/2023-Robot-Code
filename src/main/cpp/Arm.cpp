@@ -1,24 +1,31 @@
 #include "Arm.h"
 
-arm::Arm::Arm(){
-    extentionMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
-    extentionMotor.SetSmartCurrentLimit(25);
-
+arm::Arm::Arm() {
+    extensionMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
+    extensionMotor.SetSmartCurrentLimit(25);
+    extensionMotor.SetInverted(true);
+    extensionEncoder.SetPosition(0);
 }
 
 units::meter_t arm::Arm::GetPosition() {
-    return units::meter_t{extentionMotor.GetEncoder().GetPosition() / arm::Constants::kArmRatio};
-
+    return (extensionEncoder.GetPosition() / Constants::kArmRatio) * Constants::kSprocketDiameter;
 }
+
 void arm::Arm::SetPositionGoal(units::meter_t distance) {
     positionController.SetGoal(distance);
-
 }
 
 void arm::Arm::Tick() {
-    extentionMotor.Set(
-        positionController.Calculate(
-            units::meter_t{extentionMotor.GetEncoder().GetPosition()}
-        )
-    );      
+    frc::SmartDashboard::PutNumber("arm_extension_m", GetPosition().value());
+    
+    if(bEnabled) {
+        if(manualPercentage != 0.0) {
+            extensionMotor.Set(manualPercentage);
+        }
+        else {
+            extensionMotor.Set(
+                positionController.Calculate(GetPosition())
+            );
+        }
+    } 
 }

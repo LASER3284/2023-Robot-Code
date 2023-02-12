@@ -13,8 +13,14 @@
     },
     "types": {
       "/FMSInfo": "FMSInfo",
+      "/LiveWindow/Ungrouped/Talon FX [10]": "Motor Controller",
+      "/LiveWindow/Ungrouped/Talon FX [11]": "Motor Controller",
+      "/LiveWindow/Ungrouped/Talon FX [14]": "Motor Controller",
+      "/LiveWindow/Ungrouped/Talon FX [7]": "Motor Controller",
+      "/LiveWindow/Ungrouped/navX-Sensor[1]": "Gyro",
       "/SmartDashboard/Auto Modes": "String Chooser",
       "/SmartDashboard/PPSwerveControllerCommand_field": "Field2d",
+      "/SmartDashboard/field": "Field2d",
       "/SmartDashboard/headingPIDController": "PIDController",
       "/SmartDashboard/headingSnapPIDController": "PIDController"
     }
@@ -22,5 +28,33 @@
   "NetworkTables Settings": {
     "mode": "Client (NT3)",
     "serverTeam": "3284"
+  },
+  "Plots": {
+    "Plot <0>": {
+      "plots": [
+        {
+          "axis": [
+            {
+              "autoFit": true
+            }
+          ],
+          "height": 762,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/intakeCurrent_a"
+            }
+          ]
+        }
+      ],
+      "window": {
+        "visible": false
+      }
+    }
   }
 }

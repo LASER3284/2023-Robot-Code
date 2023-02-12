@@ -23,6 +23,10 @@ void Robot::RobotInit() {
     m_chooser.SetDefaultOption("Test Path", "Test Path");
 
     frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
+    drivetrain.SetJoystick(false);
+
+    shoulder.ToggleControl(false);
+    arm.ToggleControl(false);
 }
 
 /**
@@ -34,18 +38,22 @@ void Robot::RobotInit() {
  * LiveWindow and SmartDashboard integrated updating.
  */
 void Robot::RobotPeriodic() {
+    drivetrain.Tick();
     drivetrain.LogEncoders();
+
+    shoulder.Tick();
+    arm.Tick();
 }
 
 void Robot::AutonomousInit() {
     currentAutonomousState = m_chooser.GetSelected();
     fmt::print("Currently selected auto path: {}\n", currentAutonomousState);
     drivetrain.SetTrajectory(currentAutonomousState, true);
+
+    shoulder.ToggleControl(true);
 }
 
 void Robot::AutonomousPeriodic() {    
-    drivetrain.Tick();
-
     // All of these autos start with a preloaded cone and immediately score it
     if(currentAutonomousState == "Mobile Cone" || currentAutonomousState == "Cone Cube - Balance" || 
         currentAutonomousState == "Cone Cube"  || currentAutonomousState == "Far Cone Cube - Balance" ||
@@ -89,13 +97,14 @@ void Robot::AutonomousPeriodic() {
 }
 
 void Robot::TeleopInit() {
-    lighthandler.SetColor(frc::Color::kOrange);
+    lighthandler.SetColor(frc::Color::kRed);
     drivetrain.SetJoystick(true);
+
+    shoulder.ToggleControl(true);
+    arm.ToggleControl(true);
 }
 
 void Robot::TeleopPeriodic() {
-    drivetrain.Tick();
-
     const auto currentRobotPose = drivetrain.GetPose();
 
     // Iterate over all of the grid locations in order to determine what grid that the robot is currently in
@@ -115,6 +124,106 @@ void Robot::TeleopPeriodic() {
     SmartDashboard::PutNumber("currentGrid", currentGrid);
 
     // TODO: Implement automatic scoring
+    if(auxController.GetRawButton(constants::ButtonBoardButtons::eConeMode)) {
+        lighthandler.SetColor(frc::Color::kOrange);
+        intake.ConeMode();
+    }
+    else if (auxController.GetRawButton(constants::ButtonBoardButtons::eCubeMode))
+    {
+        lighthandler.SetColor(frc::Color::kPurple);
+        intake.CubeMode();
+    }
+    else if(auxController.GetRawButton(constants::ButtonBoardButtons::eOut)) {
+        fmt::print("Spitting out element...");
+        intake.Spit();
+    }
+    else if(intake.HasElement()) {
+        lighthandler.SetColor(frc::Color::kGreen);
+        intake.Stop();
+        driveController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, 1.0);
+    }
+    else {
+        intake.Stop();
+        driveController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, 0.0);
+    }
+
+    // We're using a deque in order to store the most recent (0.25sec) buttons pressed in order to determine the scoring location
+
+    if(auxController.GetRawButtonPressed(constants::ButtonBoardButtons::eUp)) 
+        previousButtons.push_front(constants::ButtonBoardButtons::eUp);
+    if(auxController.GetRawButtonPressed(constants::ButtonBoardButtons::eDown))
+        previousButtons.push_front(constants::ButtonBoardButtons::eDown);
+    if(auxController.GetRawButtonPressed(constants::ButtonBoardButtons::eMid))
+        previousButtons.push_front(constants::ButtonBoardButtons::eMid);
+    if(auxController.GetRawButtonPressed(constants::ButtonBoardButtons::eRight))
+        previousButtons.push_front(constants::ButtonBoardButtons::eRight);
+    if(auxController.GetRawButtonPressed(constants::ButtonBoardButtons::eLeft))
+        previousButtons.push_front(constants::ButtonBoardButtons::eLeft);
+
+    if(previousButtons.size() > 1) {
+        buttonTimer.Restart();
+    }
+    
+    if(buttonTimer.AdvanceIfElapsed(0.25_s)) {
+        // If the user still hasn't pressed a second button within 0.25 seconds, reset the deque
+        if(previousButtons.size() <= 1) {
+            previousButtons.clear();
+            buttonTimer.Stop();
+            buttonTimer.Reset();
+        }
+        // If the user has pressed atleast a second button within the 0.25 seconds, start auto placing / moving to the grid
+        else {
+            fmt::print("Current grid: %d :: Selecting scoring location", currentGrid);
+        }
+    }
+
+    // Use the joysticks to manually control the arm
+    double manualOverride = frc::ApplyDeadband(auxController.GetRawAxis(constants::ButtonBoardAxis::eJoystickAxisX), 0.10);
+    if(manualOverride != 0) {
+        double factor = 0.25;
+        if(manualOverride > 0) {
+            factor = 0.15;
+        }
+        
+        shoulder.ManualControl(wpi::sgn(manualOverride) * factor);
+        shoulder.AdjustFeedforward(-0.3_V);
+    }
+    else {
+        shoulder.ManualControl(0.0);
+        shoulder.AdjustFeedforward(-0.3_V);
+    }
+
+    double wristOverride = frc::ApplyDeadband(auxController.GetRawAxis(constants::ButtonBoardAxis::eJoyStickAxisY), 0.10);
+    if(wristOverride != 0) {
+        double factor = 0.25;
+        if(manualOverride > 0) {
+            factor = 0.15;
+        }
+
+        wrist.ManualControl(wpi::sgn(wristOverride) * factor);
+    }
+    else {
+        wrist.ManualControl(0.0);
+    }
+
+    // Use the ""fork"" up/down buttons in order to control the arm manually up/down
+    if(auxController.GetRawButton(constants::ButtonBoardButtons::eForkUp)) {
+        arm.ManualControl(0.5);
+    }
+    else if(auxController.GetRawButton(constants::ButtonBoardButtons::eForkDown)) {
+        arm.ManualControl(-0.5);
+    }
+    else {
+        arm.ManualControl(0.0);
+    }
+    
+    arm.Tick();
+
+    //shoulder.AdjustFeedforward(kinematics::Kinematics::CalculateShoulderkG(arm.GetPosition(), shoulder.GetRotation()));
+    shoulder.Tick();
+    wrist.Tick();
+
+    frc::SmartDashboard::PutNumber("intakeCurrent_a", intake.GetFilteredCurrent().value());
 }
 
 void Robot::DisabledInit() {
@@ -128,10 +237,14 @@ void Robot::DisabledPeriodic() {
 
 void Robot::TestInit() {
     drivetrain.SetJoystick(false);
+    arm.ToggleControl(false);
+    shoulder.ToggleControl(false);
+    rev::CANSparkMaxLowLevel::EnableExternalUSBControl(true);
 }
 
 void Robot::TestPeriodic() {
-    drivetrain.Tick();
+    arm.Tick();
+    shoulder.Tick();
 }
 
 void Robot::SimulationInit() {}
