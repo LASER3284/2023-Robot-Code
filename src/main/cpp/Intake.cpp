@@ -8,16 +8,26 @@ void intake::Intake::ConeMode(){
     intakeSolenoid1.Set(false);
     intakeSolenoid2.Set(true);
     Inhale();
+
+    cubeMode = false;
 }
 
 void intake::Intake::CubeMode() { 
     intakeSolenoid1.Set(true);
     intakeSolenoid2.Set(false);
     Inhale();
+
+    cubeMode = true;
 }
 
 void intake::Intake::Inhale() {
+    // Run the main intake motor at 90% in order to start intaking things
     intakeMotor.Set(0.90);
+}
+
+void intake::Intake::Hold() {
+    // Apply a small amount of voltage in order to keep the item in the claw
+    intakeMotor.Set(0.70);
 }
 
 void intake::Intake::Spit() {
@@ -29,6 +39,6 @@ void intake::Intake::Stop() {
 }
 
 bool intake::Intake::HasElement() {
-    return GetFilteredCurrent() >= 20_A;
+    return GetFilteredCurrent() >= 20.5_A;
 }
 

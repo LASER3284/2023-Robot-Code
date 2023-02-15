@@ -3,12 +3,13 @@
 #include "Constants.h"
 #include <units/length.h>
 #include <units/angular_velocity.h>
+#include <units/angular_acceleration.h>
 #include <units/velocity.h>
 #include <units/voltage.h>
 
 #include <frc/geometry/Pose3d.h>
 
-namespace kinematics {
+namespace kinematics {    
     class Constants {
         public:
             static constexpr units::meter_t coneModeLength = 12_in;
@@ -21,7 +22,7 @@ namespace kinematics {
             static constexpr units::meter_t wheelToBellyPan = 4_in;
             static constexpr units::meter_t bellyPanToPivotPoint = 18_in;
 
-            static constexpr frc::Pose3d    pivotPoint { 0_m, 0_m, 0_m };
+            static constexpr frc::Translation3d pivotPoint = { 0_m, 0_m, 0_m };
     };
 
     struct KinematicState {
@@ -32,8 +33,7 @@ namespace kinematics {
 
     class Kinematics {
         public:
-            using Acceleration = units::compound_unit<units::radians_per_second, units::inverse<units::second>>;
-
+            
             /// @brief Returns whether or not a kinematic state / intake mode is valid
             /// @param coneMode Whether or not the intake is in cone mode
             /// @param state The current kinematic state of the arm
@@ -44,10 +44,10 @@ namespace kinematics {
                 // di is the horizontal extension of the wrist
                 units::meter_t di = 0_m;
                 if(state.wristAngle != 90_deg) {
-                    units::radian_t C = units::radian_t( (180_deg - abs(state.wristAngle.value()) - 90_deg) );
+                    units::radian_t C = units::radian_t( (180_deg - units::math::abs(state.wristAngle) - 90_deg) );
                     di = (
-                        intakeLength * sin(C.value()) / 
-                        sin(units::radian_t(90_deg).value())
+                        intakeLength * units::math::sin(C) / 
+                        units::math::sin(90_deg)
                     );
                 }
                 else if(state.wristAngle == 90_deg) {
@@ -56,7 +56,7 @@ namespace kinematics {
 
                 // m is the total horizontal extension of the arm up to the wrist
                 units::radian_t mC = units::radian_t(180_deg - state.shoulderAngle - 90_deg);
-                units::meter_t m = (Constants::staticArmLength + state.armExtension) * sin(mC.value());
+                units::meter_t m = (Constants::staticArmLength + state.armExtension) * units::math::sin(mC);
 
                 units::meter_t horizontalExtension = (m - Constants::pivotPointHorizontalOffset) + di;
                 if(horizontalExtension >= 48_in) {
@@ -100,35 +100,19 @@ namespace kinematics {
                 const units::meter_t xO = intakePoint.X() - Constants::pivotPoint.X();
                 const units::meter_t zO = intakePoint.Z() - Constants::pivotPoint.Z();
 
-                const units::meter_t L = units::meter_t( 
-                    sqrt(pow(xO.value(), 2) + pow(zO.value(), 2)) - 
-                    Constants::staticArmLength + intakeLength
-                );
+                const units::meter_t L = units::math::sqrt(units::math::pow<2>(xO) + units::math::pow<2>(zO)) - Constants::staticArmLength + intakeLength;
 
-                const units::radian_t shoulderTheta = units::radian_t(
-                    asin((zO / (Constants::staticArmLength + L + intakeLength)).value())
-                );
+                const units::radian_t shoulderTheta = units::math::asin((zO / (Constants::staticArmLength + L + intakeLength)));
 
-                const units::meter_t wristHeight = (Constants::staticArmLength + L) * sin(shoulderTheta.value());
+                const units::meter_t wristHeight = (Constants::staticArmLength + L) * units::math::sin(shoulderTheta);
 
                 const units::meter_t intakeHeight = zO - wristHeight;
 
-                const units::radian_t intakeTheta = units::radian_t(
-                    asin((intakeHeight / intakeLength).value())
-                );
+                const units::radian_t intakeTheta = units::math::asin(intakeHeight / intakeLength);
 
                 return KinematicState {  L, shoulderTheta, intakeTheta };
             }
 
-            /// @brief Calculates the voltage in order to overcome gravity based on the angle of the arm and the extension length
-            /// @param extension The extension of the shoulder
-            /// @param theta The angle of the shoulder
-            /// @return The calculated feedforward in volts
-            static const units::volt_t CalculateShoulderkG(const units::meter_t extension, const units::radian_t theta) {
-                // TODO: Calculate kG based on arm extension
-                // return kG * cos(theta)
-                return 0.3_V;
-            }
 
             /// @brief Calculates the feed forward voltage based on the angle of the arm and the extension length
             /// @param extension The extension of the arm
@@ -136,11 +120,14 @@ namespace kinematics {
             /// @param velocity The velocity setpoint in radians per second
             /// @param accel The acceleration setpoint in radians per second²
             /// @return The calculated feedforward in volts
-            static const units::volt_t CalculateShoulderFeedforward(const units::meter_t extension, const units::radian_t angle, const units::radians_per_second_t velocity, const Acceleration accel) {
-                // TODO: Calculate kS based on arm extension
-                // TODO: Calculate kG based on arm extension
-                // TODO: Calculate kV based on arm extension
-                return 0_V;
+            static const units::volt_t CalculateShoulderFeedforward(const units::meter_t extension, const units::radian_t angle, const units::radians_per_second_t velocity, const units::radians_per_second_squared_t accel = 0_rad_per_s_sq) {
+                const units::volt_t kS = ((-0.0611_V *  extension.value()) + 0.57817_V);
+                const units::volt_t kG = ((0.10971_V * extension.value()) + 0.49335_V);
+                const auto kV =          ((0.17423_V * extension.value()) + 3.90020_V) / 1_rad_per_s;
+                const auto kA =          ((-0.83796_V * extension.value()) + 1.44075_V) / 1_rad_per_s_sq;
+                
+                return (kG * units::math::cos(angle));
+                //return (kS * wpi::sgn(velocity)) + (kG * units::math::cos(angle)) + (kV * velocity) + (kA * accel);
             }
     };
 }

@@ -16,6 +16,7 @@
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/apriltag/AprilTagFieldLayout.h>
 #include <frc/controller/ProfiledPIDController.h>
+#include <frc/Errors.h>
 
 #include <pathplanner/lib/PathPlanner.h>
 #include <pathplanner/lib/commands/PPSwerveControllerCommand.h>
@@ -70,11 +71,20 @@ namespace drive {
             void UpdateOdometry();
             frc::Pose2d GetPose();
 
+            void SetTrajectory(const frc::Pose2d pose);
             void SetTrajectory(const std::string& pathName, bool resetPose = false);
             void StartNextTrajectory();
             const AutonomousState FollowTrajectory();
 
             void ForceStop();
+
+            void ForceVisionPose() {
+                poseEstimator.ResetPosition(
+                    gyro.GetRotation2d(), 
+                    { frontleft.GetPosition(), frontright.GetPosition(), backleft.GetPosition(), backright.GetPosition() },
+                    pastRobotPose.ToPose2d()
+                );
+            }
         private:
             frc::SlewRateLimiter<units::velocity::meters_per_second> xSpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.0625_s };
             frc::SlewRateLimiter<units::velocity::meters_per_second> ySpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.0625_s };
@@ -120,7 +130,13 @@ namespace drive {
 
             /// @brief A list of mappings between photonlib::PhotonCamera and Transform3d
             std::vector<std::pair<std::shared_ptr<photonlib::PhotonCamera>, frc::Transform3d>> cameras {
-                { std::make_shared<photonlib::PhotonCamera>("mainCam"), frc::Transform3d() }
+                { 
+                    std::make_shared<photonlib::PhotonCamera>("mainCam"), 
+                    frc::Transform3d(
+                        frc::Translation3d(-4.5_in, 2_in, 22.625_in),
+                        frc::Rotation3d(10_deg, 0_deg, 0_deg)
+                    ) 
+                }
             };
             
             /// @brief A RobotPoseEstimator grabs the ""best"" pose to be used for the given AprilTags in view
@@ -136,6 +152,9 @@ namespace drive {
 
             /// @brief An object representing the field for displaying the robot pose from the poseEstimator
             frc::Field2d field;
+
+            /// @brief Whether or not the user has cancelled the current trajectory (in teleop)
+            bool bFollowTrajectory = true;
 
             /// @brief A list/vector holding all of the paths to follow, each subpath is separated by the given stop point
             std::vector<pathplanner::PathPlannerTrajectory> subpaths;

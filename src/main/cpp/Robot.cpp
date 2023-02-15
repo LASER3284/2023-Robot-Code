@@ -20,13 +20,15 @@ void Robot::RobotInit() {
     {
         m_chooser.AddOption(human_name, path_file);
     }
-    m_chooser.SetDefaultOption("Test Path", "Test Path");
+    m_chooser.SetDefaultOption("Autonomous Idle", "Autonomous Idle");
 
     frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
     drivetrain.SetJoystick(false);
 
     shoulder.ToggleControl(false);
     arm.ToggleControl(false);
+
+    frc::SmartDashboard::PutBoolean("extensionLimits", true);
 }
 
 /**
@@ -48,12 +50,21 @@ void Robot::RobotPeriodic() {
 void Robot::AutonomousInit() {
     currentAutonomousState = m_chooser.GetSelected();
     fmt::print("Currently selected auto path: {}\n", currentAutonomousState);
-    drivetrain.SetTrajectory(currentAutonomousState, true);
+    if(currentAutonomousState == "Autonomous Idle") { 
+        drivetrain.ForceVisionPose(); 
+    }
+    else { 
+        drivetrain.SetTrajectory(currentAutonomousState, true); 
+    }
 
     shoulder.ToggleControl(true);
 }
 
-void Robot::AutonomousPeriodic() {    
+void Robot::AutonomousPeriodic() {
+    if(currentAutonomousState == "Autonomous Idle") {
+        drivetrain.ForceStop();
+    }
+    
     // All of these autos start with a preloaded cone and immediately score it
     if(currentAutonomousState == "Mobile Cone" || currentAutonomousState == "Cone Cube - Balance" || 
         currentAutonomousState == "Cone Cube"  || currentAutonomousState == "Far Cone Cube - Balance" ||
@@ -102,28 +113,41 @@ void Robot::TeleopInit() {
 
     shoulder.ToggleControl(true);
     arm.ToggleControl(true);
+
+    // On teleop init, set the wrist to go to the current wrist angle so that way its not trying to move to a previous setpoint
+    wrist.SetRotationGoal(wrist.GetRotation());
 }
 
 void Robot::TeleopPeriodic() {
+    units::degree_t shoulderSetpoint = shoulder.GetRotation();
+
     const auto currentRobotPose = drivetrain.GetPose();
 
     // Iterate over all of the grid locations in order to determine what grid that the robot is currently in
     int currentGrid = 0;
+    bool bInsideCommunity = false;
     for(const auto &gridLocations : fieldConstants.gridLocations) {
         const auto bottomLeft = std::get<0>(gridLocations);
         const auto topRight = std::get<1>(gridLocations);
 
-        if((currentRobotPose.X() >= bottomLeft.X() && currentRobotPose.X() <= topRight.X()) && (currentRobotPose.Y() >= bottomLeft.Y() && currentRobotPose.Y() <= topRight.Y())) {
+        // Check whether or not the robot is currently inside the square for the given grid
+        if(
+            (currentRobotPose.X() >= bottomLeft.X() && currentRobotPose.Y() >= bottomLeft.Y()) && 
+            (currentRobotPose.X() <= topRight.X() && currentRobotPose.Y() <= topRight.Y())
+        ) {
+            bInsideCommunity = true;
             break;
         }
-        
-        // Move onto the next grid if we aren't in the right one
+
         currentGrid++;
     }
 
-    SmartDashboard::PutNumber("currentGrid", currentGrid);
+    if(!bInsideCommunity) currentGrid = -1;
 
-    // TODO: Implement automatic scoring
+    SmartDashboard::PutNumber("currentGrid", currentGrid);
+    SmartDashboard::PutBoolean("bInsideCommunity", bInsideCommunity);
+
+    // TODO: Implement automatic scoring and positioning
     if(auxController.GetRawButton(constants::ButtonBoardButtons::eConeMode)) {
         lighthandler.SetColor(frc::Color::kOrange);
         intake.ConeMode();
@@ -134,21 +158,31 @@ void Robot::TeleopPeriodic() {
         intake.CubeMode();
     }
     else if(auxController.GetRawButton(constants::ButtonBoardButtons::eOut)) {
-        fmt::print("Spitting out element...");
+        lighthandler.SetColor(frc::Color::kRed);
         intake.Spit();
     }
     else if(intake.HasElement()) {
+        // Set the lights to green whenever we've picked something up
         lighthandler.SetColor(frc::Color::kGreen);
-        intake.Stop();
-        driveController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, 1.0);
+
+        // Start spinning the intake *slightly* in order to hold objects
+        intake.Hold();
+
+        // Start a small timer (if it's not been started) in order to time the duration of controller rumbling
+        rumbleTimer.Start();
+
+        // After 2 seconds, we want to stop rumbling the controller in order to avoid annoying the driver.
+        driveController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, rumbleTimer.HasElapsed(2_s) ? 0.0 : 1.0);
     }
     else {
+        rumbleTimer.Reset();
+        rumbleTimer.Stop();
         intake.Stop();
+        // Make sure to stop rumbling the controller
         driveController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, 0.0);
     }
 
     // We're using a deque in order to store the most recent (0.25sec) buttons pressed in order to determine the scoring location
-
     if(auxController.GetRawButtonPressed(constants::ButtonBoardButtons::eUp)) 
         previousButtons.push_front(constants::ButtonBoardButtons::eUp);
     if(auxController.GetRawButtonPressed(constants::ButtonBoardButtons::eDown))
@@ -160,43 +194,96 @@ void Robot::TeleopPeriodic() {
     if(auxController.GetRawButtonPressed(constants::ButtonBoardButtons::eLeft))
         previousButtons.push_front(constants::ButtonBoardButtons::eLeft);
 
-    if(previousButtons.size() > 1) {
+    if(previousButtons.size() > 1 && !buttonTimerStarted) {
+        fmt::print("Restarting button timer\n");
+
         buttonTimer.Restart();
+        buttonTimerStarted = true;
+        aligningToGrid = false;
     }
     
-    if(buttonTimer.AdvanceIfElapsed(0.25_s)) {
-        // If the user still hasn't pressed a second button within 0.25 seconds, reset the deque
+    if(aligningToGrid) {
+        const drive::AutonomousState state = drivetrain.FollowTrajectory();
+        if(state.bCompletedPath) {
+            // Flash the lights white whenever we've auto lined up to the scoring position.
+            lighthandler.SetColor(frc::Color::kWhite);
+            
+            buttonTimerStarted = false;
+            aligningToGrid = false;
+            previousButtons.clear();
+
+            drivetrain.ForceStop();
+        }
+    }
+    else if(buttonTimer.AdvanceIfElapsed(0.25_s)) {
+        // If the user still hasn't pressed a second button within 0.25 seconds, reset the deque & timer
         if(previousButtons.size() <= 1) {
             previousButtons.clear();
             buttonTimer.Stop();
             buttonTimer.Reset();
+            buttonTimerStarted = false;
         }
         // If the user has pressed atleast a second button within the 0.25 seconds, start auto placing / moving to the grid
-        else {
-            fmt::print("Current grid: %d :: Selecting scoring location", currentGrid);
+        else {            
+            // Force the deque to only have the first 2 elements (buttons) in it
+            previousButtons.resize(2);
+
+            // Use an array that stores the values of all of the pressed buttons to avoid triple checking the same "if button = left" multiple times and making the code worse.
+            std::array<bool, 12> pressedButtons = {};
+            for(int i = 0; i < 12; i++) {
+                pressedButtons[i] = std::find(previousButtons.begin(), previousButtons.end(), (constants::ButtonBoardButtons)i) != previousButtons.end();
+            }
+
+            // goalPose is the translation that the robot needs to drive to in order to be in the proper position
+            frc::Translation2d goalPose = frc::Translation2d();
+
+            // Set the goal pose based on the buttons pressed
+            if(pressedButtons[constants::ButtonBoardButtons::eLeft]) {
+                goalPose = fieldConstants.lowLocations[0 + (currentGrid * 3)].location.ToTranslation2d();
+            }
+            else if(pressedButtons[constants::ButtonBoardButtons::eMid]) {
+                goalPose = fieldConstants.lowLocations[1 + (currentGrid * 3)].location.ToTranslation2d();
+            }
+            else if(pressedButtons[constants::ButtonBoardButtons::eRight]) {
+                goalPose = fieldConstants.lowLocations[2 + (currentGrid * 3)].location.ToTranslation2d();
+            }
+
+            // Add/subtract an extra 7.25in in order to account for robot size.
+            // If we're on the red alliance, we actually want to subtract this difference due to the lack of field symmetry.
+            goalPose = goalPose + frc::Translation2d(
+                fieldConstants.outerX + 7.25_in * (frc::DriverStation::GetAlliance() == frc::DriverStation::Alliance::kBlue ? 1 : -1), 
+                0_m
+            );
+            
+            // Set the drive train to actually start moving to the goal pose
+            // TODO: Potentially automatically rotate the robot to face properly
+            // It might be best to keep the robot facing the same way it currently is to avoid hitting unknown objects (or the field)
+            drivetrain.SetTrajectory(frc::Pose2d(goalPose, drivetrain.GetPose().Rotation()));
+
+            buttonTimer.Stop();
+            aligningToGrid = true;
         }
     }
 
     // Use the joysticks to manually control the arm
-    double manualOverride = frc::ApplyDeadband(auxController.GetRawAxis(constants::ButtonBoardAxis::eJoystickAxisX), 0.10);
-    if(manualOverride != 0) {
+    double shoulderOverride = frc::ApplyDeadband(auxController.GetRawAxis(constants::ButtonBoardAxis::eJoystickAxisX), 0.10);
+    if(shoulderOverride != 0) {
         double factor = 0.25;
-        if(manualOverride > 0) {
-            factor = 0.15;
+        if(shoulderOverride > 0) {
+            factor = 0.2;
         }
         
-        shoulder.ManualControl(wpi::sgn(manualOverride) * factor);
-        shoulder.AdjustFeedforward(-0.3_V);
+        shoulder.ManualControl(wpi::sgn(shoulderOverride) * -factor);
+        shoulder.AdjustFeedforward(0.3_V);
     }
     else {
         shoulder.ManualControl(0.0);
-        shoulder.AdjustFeedforward(-0.3_V);
     }
 
     double wristOverride = frc::ApplyDeadband(auxController.GetRawAxis(constants::ButtonBoardAxis::eJoyStickAxisY), 0.10);
     if(wristOverride != 0) {
         double factor = 0.25;
-        if(manualOverride > 0) {
+        if(wristOverride > 0) {
             factor = 0.15;
         }
 
@@ -207,21 +294,43 @@ void Robot::TeleopPeriodic() {
     }
 
     // Use the ""fork"" up/down buttons in order to control the arm manually up/down
-    if(auxController.GetRawButton(constants::ButtonBoardButtons::eForkUp)) {
-        arm.ManualControl(0.5);
-    }
-    else if(auxController.GetRawButton(constants::ButtonBoardButtons::eForkDown)) {
-        arm.ManualControl(-0.5);
-    }
-    else {
-        arm.ManualControl(0.0);
-    }
+    if(auxController.GetRawButton(constants::ButtonBoardButtons::eForkUp)) arm.ManualControl(0.5);
+    else if(auxController.GetRawButton(constants::ButtonBoardButtons::eForkDown)) arm.ManualControl(-0.5);
+    else arm.ManualControl(0.0);
     
+    // TODO: Implement extension limits
+    frc::SmartDashboard::PutBoolean("cubeMode", intake.IsCubeMode());
+    const kinematics::KinematicState kinematicState = { arm.GetPosition(), shoulder.GetRotation(), wrist.GetRotation() };
+    if(frc::SmartDashboard::GetBoolean("extensionLimits", true)) {
+        // Check whether or not the current kinematic state is illegal
+        if(!kinematics::Kinematics::IsValid(!intake.IsCubeMode(), kinematicState)) {
+            FRC_ReportError(warn::Warning, "[Robot] Running into arm extension limits... Retracting in");
+            // arm.SetPositionGoal(arm.GetPosition() - 1_in);
+        }
+    }
+
     arm.Tick();
 
-    //shoulder.AdjustFeedforward(kinematics::Kinematics::CalculateShoulderkG(arm.GetPosition(), shoulder.GetRotation()));
+    if(shoulderOverride != 0) {
+        units::degree_t shoulderAngle = shoulder.GetRotation();
+
+        // Interpolate the max rotational velocity of the shoulder based on the current setpoint
+        units::radians_per_second_t shoulderVelocity = wpi::Lerp<units::radians_per_second_t>(
+            0_rad_per_s, 
+            shoulder::Constants::maxRotationalVelocity, 
+            ((shoulderSetpoint - shoulderAngle) / shoulder::Constants::maxRotation).value()
+        );
+
+        shoulder.SetRotationGoal(shoulderSetpoint);
+        shoulder.AdjustFeedforward(kinematics::Kinematics::CalculateShoulderFeedforward(arm.GetPosition(), shoulderSetpoint, shoulderVelocity));
+    }
+    
     shoulder.Tick();
     wrist.Tick();
+
+    if(wristOverride != 0) {
+        wrist.SetRotationGoal(wrist.GetRotation());
+    }
 
     frc::SmartDashboard::PutNumber("intakeCurrent_a", intake.GetFilteredCurrent().value());
 }
@@ -239,13 +348,14 @@ void Robot::TestInit() {
     drivetrain.SetJoystick(false);
     arm.ToggleControl(false);
     shoulder.ToggleControl(false);
+    
     rev::CANSparkMaxLowLevel::EnableExternalUSBControl(true);
+
+    // In test mode, force the drive train pose to the current estimated robot pose
+    drivetrain.ForceVisionPose();
 }
 
-void Robot::TestPeriodic() {
-    arm.Tick();
-    shoulder.Tick();
-}
+void Robot::TestPeriodic() {}
 
 void Robot::SimulationInit() {}
 

@@ -48,6 +48,15 @@ void drive::Drive::Tick() {
     double yAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eLeftAxisY), 0.10);
     double rAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eRightAxisX), 0.10);
 
+    if((xAxis != 0 || yAxis != 0 || rAxis != 0) && pathCommand != nullptr) {
+        bFollowTrajectory = false;
+    }
+
+    // If we're currently following a path, don't both to do anything else with the drive train
+    if(pathCommand != nullptr && bFollowTrajectory) {
+        return;
+    }
+
     auto maxTranslationalVelocity = drive::Constants::maxTranslationalVelocity / 2;
     auto maxRotationalVelocity = drive::Constants::maxRotationalVelocity / 2;
 
@@ -220,12 +229,16 @@ void drive::Drive::ResetOdometry() {
 
 const drive::AutonomousState drive::Drive::FollowTrajectory() {
     if(pathCommand == nullptr) {
-        FRC_ReportError(1, "Unable to follow trajectory; No valid path command generated");
+        FRC_ReportError(frc::err::Error, "[Robot] Unable to follow trajectory; No valid path command generated");
         return { false, 9999, true };
     }
 
     if(!pathCommand->IsFinished()) {
         pathCommand->Execute();
+    }
+
+    if(pathCommand->IsFinished()) {
+        bFollowTrajectory = false;
     }
     
     return { 
@@ -257,12 +270,32 @@ void drive::Drive::StartNextTrajectory() {
             }
         );
 
+        field.GetObject("trajectory")->SetTrajectory(subpaths[currentStopPoint].asWPILibTrajectory());
+
         // Start and schedule the path following command
         pathCommand->Schedule();
     }
 }
 
+void drive::Drive::SetTrajectory(frc::Pose2d pose) {
+    bFollowTrajectory = true;
+    
+    frc::Pose2d robotPose = GetPose();
+    std::vector<PathPoint> points = { 
+        { robotPose.Translation(), robotPose.Rotation(), robotPose.Rotation() }, 
+        { pose.Translation(), pose.Rotation(), robotPose.Rotation() }
+    };
+    subpaths = { PathPlanner::generatePath( { 1.0_mps, 1.0_mps_sq }, points) };
+    currentStopPoint = -1;
+
+    field.GetObject("end_point")->SetPose(pose);
+
+    StartNextTrajectory();
+}
+
 void drive::Drive::SetTrajectory(const std::string& pathName, bool resetPose) {
+    bFollowTrajectory = true;
+
     subpaths = PathPlanner::loadPathGroup(pathName, { { 3.0_mps, 3.0_mps_sq } });
     currentStopPoint = -1;
     
@@ -298,6 +331,8 @@ void drive::Drive::UpdateOdometry() {
     }
 
     field.SetRobotPose(poseEstimator.GetEstimatedPosition());
+
+    pastRobotPose = result.first;
 }
 
 void drive::Drive::ForceStop() {

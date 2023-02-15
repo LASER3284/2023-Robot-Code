@@ -5,6 +5,9 @@
         "Auto Modes": {
           "open": true
         },
+        "field": {
+          "open": true
+        },
         "headingSnapPIDController": {
           "open": true
         },
@@ -13,6 +16,7 @@
     },
     "types": {
       "/FMSInfo": "FMSInfo",
+      "/LiveWindow/Ungrouped/Scheduler": "Scheduler",
       "/LiveWindow/Ungrouped/Talon FX [10]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [11]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [14]": "Motor Controller",

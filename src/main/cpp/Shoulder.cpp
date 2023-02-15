@@ -3,13 +3,15 @@
 shoulder::Shoulder::Shoulder() {
     motor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
     motor.SetSmartCurrentLimit(60);
-    motor.SetInverted(true);
+    motor.SetInverted(false);
     followerMotor.Follow(motor);
 }
 
 void shoulder::Shoulder::Tick() {
-    frc::SmartDashboard::PutNumber("shoulder_angle_deg", GetRotation().value());
     frc::SmartDashboard::PutNumber("shoulder_angle_abs", encoder.GetAbsolutePosition());
+    frc::SmartDashboard::PutNumber("shoulder_angle_deg", GetRotation().value());
+    frc::SmartDashboard::PutNumber("shoulder_angle_motor", mainEncoder.GetPosition() * Constants::gearRatio * 360);
+    frc::SmartDashboard::PutNumber("shoulder_velocity", GetVelocity().value());
 
     if(bEnabled) {
         if(manualPercentage != 0.0) {
@@ -18,10 +20,7 @@ void shoulder::Shoulder::Tick() {
             );
         }
         else {
-            motor.SetVoltage(feedforward);
-            // motor.SetVoltage(
-            //     units::volt_t(angleController.Calculate(GetRotation())) + feedforward
-            // );
+            motor.SetVoltage(feedforward + units::volt_t(angleController.Calculate(GetRotation().value())));
         }
     }
     else {
@@ -30,9 +29,13 @@ void shoulder::Shoulder::Tick() {
 }
 
 void shoulder::Shoulder::SetRotationGoal(units::degree_t rot) {
-    angleController.SetGoal(rot);
+    angleController.SetSetpoint(rot.value());
 }
 
 units::degree_t shoulder::Shoulder::GetRotation() {
-    return (units::degree_t(encoder.GetAbsolutePosition() * 360) - Constants::kAngleOffset) * -1;
+    return units::degree_t(encoder.GetAbsolutePosition() * 360_deg) - Constants::kAngleOffset;
+}
+
+units::degrees_per_second_t shoulder::Shoulder::GetVelocity() {
+    return units::degrees_per_second_t(mainEncoder.GetVelocity() * Constants::gearRatio * 360);
 }

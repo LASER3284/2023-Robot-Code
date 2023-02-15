@@ -8,6 +8,8 @@
 #include <frc/smartdashboard/SendableChooser.h>
 #include <string>
 #include <tuple>
+#include <frc/Errors.h>
+#include <rev/CANSparkMaxLowLevel.h>
 
 #include "FieldConstants.h"
 #include "SwerveModule.h"
@@ -17,7 +19,7 @@
 #include "Intake.h"
 #include "Arm.h"
 #include "Wrist.h"
-#include <rev/CANSparkMaxLowLevel.h>
+#include "Kinematics.h"
 #include <deque>
 
 class Robot : public frc::TimedRobot {
@@ -39,8 +41,7 @@ class Robot : public frc::TimedRobot {
 
     private:
         frc::Joystick driveController { 0 };
-
-        frc::Joystick auxController { 2 };
+        frc::GenericHID auxController { 2 };
 
         /// @brief A sendable chooser / dropdown for selecting the current autonomous trajectory
         frc::SendableChooser<std::string> m_chooser;
@@ -84,9 +85,22 @@ class Robot : public frc::TimedRobot {
         /// @brief An object that represents the locations of all the field elements
         constants::FieldConstants fieldConstants;
 
+        /// @brief A boolean to track whether or not the button timer has been started
+        bool buttonTimerStarted = false;
+
         /// @brief A timer object used to track delays between button board presses
         frc::Timer buttonTimer;
 
+        /// @brief A boolean tracking if the robot is currently trying to align to the current grid position
+        bool aligningToGrid = false;
+
+        /// @brief The currently targeted scoring location to rotate the arm to
+        /// This only applies when aligningToGrid is currently true
+        frc::Translation3d targetedScoringLocation;
+
         /// @brief What button was previously pressed
         std::deque<constants::ButtonBoardButtons> previousButtons;
+
+        /// @brief A timer object used for timing the rumble of the main driving controller
+        frc::Timer rumbleTimer;
 };
