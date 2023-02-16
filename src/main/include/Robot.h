@@ -92,6 +92,9 @@ class Robot : public frc::TimedRobot {
         frc::Timer buttonTimer;
 
         /// @brief A boolean tracking if the robot is currently trying to align to the current grid position
+        bool locationSelected = false;
+
+        /// @brief A boolean tracking if the robot is currently trying to align to the current grid position
         bool aligningToGrid = false;
 
         /// @brief The currently targeted scoring location to rotate the arm to
@@ -100,6 +103,9 @@ class Robot : public frc::TimedRobot {
 
         /// @brief What button was previously pressed
         std::deque<constants::ButtonBoardButtons> previousButtons;
+
+        // A boolean mapping the pressed button board buttons to a boolean
+        std::array<bool, 12> pressedButtons = {};
 
         /// @brief A timer object used for timing the rumble of the main driving controller
         frc::Timer rumbleTimer;

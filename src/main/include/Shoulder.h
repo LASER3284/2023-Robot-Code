@@ -8,6 +8,8 @@
 #include <units/voltage.h>
 #include <frc/controller/PIDController.h>
 #include <frc/AnalogEncoder.h>
+#include <frc/AnalogInput.h>
+#include <frc/RobotController.h>
 #include <frc/smartdashboard/SmartDashboard.h>
 #include "Constants.h"
 
@@ -25,7 +27,7 @@ namespace shoulder {
             static constexpr int kShoulderPortID = 1;
 
             /// @brief The angle offset of the arm where 0_deg is facing forward, horizontally
-            static constexpr units::degree_t kAngleOffset = 74.2_deg;
+            static constexpr units::degree_t kAngleOffset = 0.0_deg;
 
             /// @brief The gear ratio from the main encoder to the final sprocket/arm shaft
             static constexpr double gearRatio = 1 / 261.8182;

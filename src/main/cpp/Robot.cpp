@@ -200,69 +200,86 @@ void Robot::TeleopPeriodic() {
         buttonTimer.Restart();
         buttonTimerStarted = true;
         aligningToGrid = false;
+        locationSelected = false;
     }
     
-    if(aligningToGrid) {
-        const drive::AutonomousState state = drivetrain.FollowTrajectory();
-        if(state.bCompletedPath) {
-            // Flash the lights white whenever we've auto lined up to the scoring position.
-            lighthandler.SetColor(frc::Color::kWhite);
-            
-            buttonTimerStarted = false;
-            aligningToGrid = false;
-            previousButtons.clear();
+    frc::SmartDashboard::PutBoolean("locationSelected", locationSelected);
+    frc::SmartDashboard::PutBoolean("aligningToGrid", aligningToGrid);
 
-            drivetrain.ForceStop();
+    if(locationSelected) {
+        if(bInsideCommunity) {
+            if(!aligningToGrid && driveController.GetRawButtonPressed(constants::XboxButtons::eButtonLB)) {
+                // goalPose is the translation that the robot needs to drive to in order to be in the proper position
+                frc::Translation2d goalPose = frc::Translation2d();
+
+                // Set the goal pose based on the buttons pressed
+                if(pressedButtons[constants::ButtonBoardButtons::eLeft]) {
+                    goalPose = fieldConstants.lowLocations[0 + (currentGrid * 3)].location.ToTranslation2d();
+                }
+                else if(pressedButtons[constants::ButtonBoardButtons::eMid]) {
+                    goalPose = fieldConstants.lowLocations[1 + (currentGrid * 3)].location.ToTranslation2d();
+                }
+                else if(pressedButtons[constants::ButtonBoardButtons::eRight]) {
+                    goalPose = fieldConstants.lowLocations[2 + (currentGrid * 3)].location.ToTranslation2d();
+                }
+
+                const units::inch_t alignmentOffset = 14.5_in;
+
+                // Add/subtract an extra half robot width in order to account for robot size.
+                // If we're on the red alliance, we actually want to subtract this difference due to the lack of field symmetry.
+                goalPose = goalPose + frc::Translation2d(
+                    alignmentOffset * (frc::DriverStation::GetAlliance() == frc::DriverStation::Alliance::kBlue ? 1 : -1), 
+                    0_in
+                );
+                
+                // Set the drive train to actually start moving to the goal pose
+                // TODO: Potentially automatically rotate the robot to face properly
+                // It might be best to keep the robot facing the same way it currently is to avoid hitting unknown objects (or the field)
+                drivetrain.SetTrajectory(frc::Pose2d(goalPose, drivetrain.GetPose().Rotation()));
+                
+                aligningToGrid = true;
+
+                fmt::print("Resetting trajectory...\n");
+            }
+            else if(aligningToGrid) { 
+                const drive::AutonomousState state = drivetrain.FollowTrajectory();
+                if(!drivetrain.GetTrajectoryActive()) {
+                    fmt::print("Trajectory cancelled... Skipping colors\n");
+                    // If the trajectory got cancelled, flip the colors to red
+
+                    lighthandler.SetColor(frc::Color::kRed);
+
+                    buttonTimerStarted = false;
+                    aligningToGrid = false;
+                    locationSelected = false;
+                    previousButtons.clear();
+                }
+                else if(state.bCompletedPath) {
+                    // Flash the lights white whenever we've auto lined up to the scoring position.
+                    lighthandler.SetColor(frc::Color::kWhite);
+                    
+                    buttonTimerStarted = false;
+                    aligningToGrid = false;
+                    locationSelected = false;
+                    previousButtons.clear();
+
+                    drivetrain.ForceStop();
+                }
+            }
         }
     }
-    else if(buttonTimer.AdvanceIfElapsed(0.25_s)) {
-        // If the user still hasn't pressed a second button within 0.25 seconds, reset the deque & timer
-        if(previousButtons.size() <= 1) {
-            previousButtons.clear();
-            buttonTimer.Stop();
-            buttonTimer.Reset();
-            buttonTimerStarted = false;
+    else if(buttonTimer.AdvanceIfElapsed(0.25_s)) {        
+        // Force the deque to only have the first 2 elements (buttons) in it
+        previousButtons.resize(2);
+
+        // Use an array that stores the values of all of the pressed buttons to avoid triple checking the same "if button = left" multiple times and making the code worse.
+        for(int i = 0; i < 12; i++) {
+            pressedButtons[i] = std::find(previousButtons.begin(), previousButtons.end(), (constants::ButtonBoardButtons)i) != previousButtons.end();
         }
-        // If the user has pressed atleast a second button within the 0.25 seconds, start auto placing / moving to the grid
-        else {            
-            // Force the deque to only have the first 2 elements (buttons) in it
-            previousButtons.resize(2);
 
-            // Use an array that stores the values of all of the pressed buttons to avoid triple checking the same "if button = left" multiple times and making the code worse.
-            std::array<bool, 12> pressedButtons = {};
-            for(int i = 0; i < 12; i++) {
-                pressedButtons[i] = std::find(previousButtons.begin(), previousButtons.end(), (constants::ButtonBoardButtons)i) != previousButtons.end();
-            }
-
-            // goalPose is the translation that the robot needs to drive to in order to be in the proper position
-            frc::Translation2d goalPose = frc::Translation2d();
-
-            // Set the goal pose based on the buttons pressed
-            if(pressedButtons[constants::ButtonBoardButtons::eLeft]) {
-                goalPose = fieldConstants.lowLocations[0 + (currentGrid * 3)].location.ToTranslation2d();
-            }
-            else if(pressedButtons[constants::ButtonBoardButtons::eMid]) {
-                goalPose = fieldConstants.lowLocations[1 + (currentGrid * 3)].location.ToTranslation2d();
-            }
-            else if(pressedButtons[constants::ButtonBoardButtons::eRight]) {
-                goalPose = fieldConstants.lowLocations[2 + (currentGrid * 3)].location.ToTranslation2d();
-            }
-
-            // Add/subtract an extra 7.25in in order to account for robot size.
-            // If we're on the red alliance, we actually want to subtract this difference due to the lack of field symmetry.
-            goalPose = goalPose + frc::Translation2d(
-                fieldConstants.outerX + 7.25_in * (frc::DriverStation::GetAlliance() == frc::DriverStation::Alliance::kBlue ? 1 : -1), 
-                0_m
-            );
-            
-            // Set the drive train to actually start moving to the goal pose
-            // TODO: Potentially automatically rotate the robot to face properly
-            // It might be best to keep the robot facing the same way it currently is to avoid hitting unknown objects (or the field)
-            drivetrain.SetTrajectory(frc::Pose2d(goalPose, drivetrain.GetPose().Rotation()));
-
-            buttonTimer.Stop();
-            aligningToGrid = true;
-        }
+        buttonTimer.Stop();
+        aligningToGrid = false;
+        locationSelected = true;
     }
 
     // Use the joysticks to manually control the arm

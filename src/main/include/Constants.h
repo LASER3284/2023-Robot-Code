@@ -27,8 +27,8 @@ namespace constants {
         eConeMode = 8,
         eCubeMode = 9,
 
-        ePanic = 10,
-        
+        eshelf = 10,
+        eground = 7, 
         eForkDown = 11,
         eForkUp = 12,
     };

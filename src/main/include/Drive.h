@@ -84,7 +84,13 @@ namespace drive {
                     { frontleft.GetPosition(), frontright.GetPosition(), backleft.GetPosition(), backright.GetPosition() },
                     pastRobotPose.ToPose2d()
                 );
+
+                field.SetRobotPose(pastRobotPose.ToPose2d());
             }
+
+            /// @brief Returns whether or not the current trajectory is active and not cancelled
+            /// @return True if there is a valid trajectory and if the trajectory is not cancelled.
+            bool GetTrajectoryActive() { return bFollowTrajectory; }
         private:
             frc::SlewRateLimiter<units::velocity::meters_per_second> xSpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.0625_s };
             frc::SlewRateLimiter<units::velocity::meters_per_second> ySpeedLimiter { drive::Constants::maxTranslationalVelocity / 0.0625_s };
@@ -140,7 +146,7 @@ namespace drive {
             };
             
             /// @brief A RobotPoseEstimator grabs the ""best"" pose to be used for the given AprilTags in view
-            photonlib::RobotPoseEstimator photonPoseEstimator { tagLayout, photonlib::CLOSEST_TO_REFERENCE_POSE, cameras };
+            photonlib::RobotPoseEstimator photonPoseEstimator { tagLayout, photonlib::PoseStrategy::LOWEST_AMBIGUITY, cameras };
             frc::Pose3d pastRobotPose = frc::Pose3d();
 
             frc::SwerveDrivePoseEstimator<4> poseEstimator = frc::SwerveDrivePoseEstimator(

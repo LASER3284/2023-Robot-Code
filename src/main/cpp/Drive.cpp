@@ -48,7 +48,7 @@ void drive::Drive::Tick() {
     double yAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eLeftAxisY), 0.10);
     double rAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eRightAxisX), 0.10);
 
-    if((xAxis != 0 || yAxis != 0 || rAxis != 0) && pathCommand != nullptr) {
+    if((xAxis != 0 || yAxis != 0 || rAxis != 0 || !controller->GetRawButton(constants::XboxButtons::eButtonLB)) && pathCommand != nullptr) {
         bFollowTrajectory = false;
     }
 
@@ -173,7 +173,7 @@ void drive::Drive::Tick() {
 
     wpi::array<frc::SwerveModuleState, 4> states = kinematics.ToSwerveModuleStates(fieldRelative ? relspeeds : nonrelspeeds);
 
-    bool bXPattern = controller->GetRawButton(constants::XboxButtons::eButtonLB);
+    bool bXPattern = controller->GetRawButton(constants::XboxButtons::eButtonX);
     frc::SmartDashboard::PutBoolean("bXPattern", bXPattern);
     if(bXPattern) {
         bForceAngle = true;
@@ -233,7 +233,7 @@ const drive::AutonomousState drive::Drive::FollowTrajectory() {
         return { false, 9999, true };
     }
 
-    if(!pathCommand->IsFinished()) {
+    if(bFollowTrajectory && !pathCommand->IsFinished()) {
         pathCommand->Execute();
     }
 
@@ -242,7 +242,7 @@ const drive::AutonomousState drive::Drive::FollowTrajectory() {
     }
     
     return { 
-        pathCommand->IsFinished(),
+        pathCommand->IsFinished() && bFollowTrajectory,
         currentStopPoint,
         (pathCommand->IsFinished() && currentStopPoint + 1 >= subpaths.size())
     };
