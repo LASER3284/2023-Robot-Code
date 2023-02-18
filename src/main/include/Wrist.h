@@ -23,7 +23,7 @@ namespace wrist {
             /// @brief The starting angle for the wrist
             static constexpr units::degree_t kStartingAngle = 90_deg;
 
-            static constexpr units::volt_t kG = 0.30_V;
+            static constexpr units::volt_t kG = 0.35_V;
             static constexpr auto kV = 0.59_V / 1_rad_per_s;
             static constexpr units::volt_t kS = 0.0_V;
             static constexpr auto kA = 0.0_V / 1_rad_per_s_sq;

@@ -29,6 +29,8 @@ void Robot::RobotInit() {
     arm.ToggleControl(false);
 
     frc::SmartDashboard::PutBoolean("extensionLimits", true);
+    shoulder.SetRotationGoal(shoulder.GetRotation());
+    arm.SetPositionGoal(arm.GetPosition());
 }
 
 /**
@@ -43,8 +45,9 @@ void Robot::RobotPeriodic() {
     drivetrain.Tick();
     drivetrain.LogEncoders();
 
-    shoulder.Tick();
+    shoulder.Tick(arm.GetPosition());
     arm.Tick();
+    wrist.Tick();
 }
 
 void Robot::AutonomousInit() {
@@ -61,14 +64,17 @@ void Robot::AutonomousInit() {
 }
 
 void Robot::AutonomousPeriodic() {
+    units::degree_t shoulderGoal = shoulder.GetRotation();
+    units::meter_t armGoal = arm.GetPosition();
+
     if(currentAutonomousState == "Autonomous Idle") {
         drivetrain.ForceStop();
     }
     
     // All of these autos start with a preloaded cone and immediately score it
-    if(currentAutonomousState == "Mobile Cone" || currentAutonomousState == "Cone Cube - Balance" || 
-        currentAutonomousState == "Cone Cube"  || currentAutonomousState == "Far Cone Cube - Balance" ||
-        currentAutonomousState == "Far Triple Score") {
+    if(currentAutonomousState == "MobileCone" || currentAutonomousState == "ConeCubeBalance" || 
+        currentAutonomousState == "ConeCube"  || currentAutonomousState == "FarConeCubeBalance" ||
+        currentAutonomousState == "FarTripleScore") {
         // TODO: Score the preloaded cone and return if we're still holding a cone
     }
 
@@ -80,9 +86,9 @@ void Robot::AutonomousPeriodic() {
     bool bForceStop = trajectoryCompleted.bCompletedPath;
     if(trajectoryCompleted.bAtStopPoint) {
         // All of these autos end up picking up the preloaded cube
-        if((currentAutonomousState == "Cone Cube" || currentAutonomousState == "Cone Cube - Balance") || 
-            (currentAutonomousState == "Far Cone Cube" || currentAutonomousState == "Far Cone Cube - Balance") ||
-            (currentAutonomousState == "Far Triple Score")) {
+        if((currentAutonomousState == "ConeCube" || currentAutonomousState == "ConeCubeBalance") || 
+            (currentAutonomousState == "FarConeCube" || currentAutonomousState == "FarConeCubeBalance") ||
+            (currentAutonomousState == "FarTripleScore")) {
             if(trajectoryCompleted.currentStopIndex == 1) {
                 // TODO: Pick up the staged cube
             }
@@ -91,7 +97,7 @@ void Robot::AutonomousPeriodic() {
                 // TODO: Score the loaded cube
             }
         }
-        else if(currentAutonomousState == "Far Triple Score") {
+        else if(currentAutonomousState == "FarTripleScore") {
             if(trajectoryCompleted.currentStopIndex == 3) {
                 // TODO: Pickup the staged cone
             }
@@ -105,6 +111,9 @@ void Robot::AutonomousPeriodic() {
     if(bForceStop) {
         drivetrain.ForceStop();
     }
+
+    arm.SetPositionGoal(armGoal);
+    shoulder.SetRotationGoal(shoulderGoal);
 }
 
 void Robot::TeleopInit() {
@@ -116,10 +125,13 @@ void Robot::TeleopInit() {
 
     // On teleop init, set the wrist to go to the current wrist angle so that way its not trying to move to a previous setpoint
     wrist.SetRotationGoal(wrist.GetRotation());
+    shoulder.SetRotationGoal(shoulder.GetRotation());
+    arm.SetPositionGoal(arm.GetPosition());
 }
 
 void Robot::TeleopPeriodic() {
-    units::degree_t shoulderSetpoint = shoulder.GetRotation();
+    units::degree_t shoulderGoal = shoulder.GetRotation();
+    units::meter_t armGoal = arm.GetPosition();
 
     const auto currentRobotPose = drivetrain.GetPose();
 
@@ -213,14 +225,27 @@ void Robot::TeleopPeriodic() {
                 frc::Translation2d goalPose = frc::Translation2d();
 
                 // Set the goal pose based on the buttons pressed
+                int offset = 0;
                 if(pressedButtons[constants::ButtonBoardButtons::eLeft]) {
                     goalPose = fieldConstants.lowLocations[0 + (currentGrid * 3)].location.ToTranslation2d();
                 }
                 else if(pressedButtons[constants::ButtonBoardButtons::eMid]) {
+                    offset = 1;
                     goalPose = fieldConstants.lowLocations[1 + (currentGrid * 3)].location.ToTranslation2d();
                 }
                 else if(pressedButtons[constants::ButtonBoardButtons::eRight]) {
+                    offset = 2;
                     goalPose = fieldConstants.lowLocations[2 + (currentGrid * 3)].location.ToTranslation2d();
+                }
+
+                if(pressedButtons[constants::ButtonBoardButtons::eUp]) {
+                    targetedScoringLocation = fieldConstants.highLocations[offset + (currentGrid * 3)].location;
+                }
+                else if(pressedButtons[constants::ButtonBoardButtons::eMid]) {
+                    targetedScoringLocation = fieldConstants.midLocations[offset + (currentGrid * 3)].location;
+                }
+                else if(pressedButtons[constants::ButtonBoardButtons::eDown]) {
+                    targetedScoringLocation = fieldConstants.lowLocations[offset + (currentGrid * 3)].location;
                 }
 
                 const units::inch_t alignmentOffset = 14.5_in;
@@ -238,15 +263,12 @@ void Robot::TeleopPeriodic() {
                 drivetrain.SetTrajectory(frc::Pose2d(goalPose, drivetrain.GetPose().Rotation()));
                 
                 aligningToGrid = true;
-
-                fmt::print("Resetting trajectory...\n");
             }
-            else if(aligningToGrid) { 
+            else if(aligningToGrid) {
                 const drive::AutonomousState state = drivetrain.FollowTrajectory();
                 if(!drivetrain.GetTrajectoryActive()) {
                     fmt::print("Trajectory cancelled... Skipping colors\n");
                     // If the trajectory got cancelled, flip the colors to red
-
                     lighthandler.SetColor(frc::Color::kRed);
 
                     buttonTimerStarted = false;
@@ -264,11 +286,18 @@ void Robot::TeleopPeriodic() {
                     previousButtons.clear();
 
                     drivetrain.ForceStop();
+
+                    const auto state = kinematics::Kinematics::GetKinematicState(
+                        !intake.IsCubeMode(), 
+                        frc::Pose3d(targetedScoringLocation + frc::Translation3d(0_in, 0_in, 5_in), frc::Rotation3d())
+                    );
+
+                    //shoulder.SetRotationGoal(state.shoulderAngle);
                 }
             }
         }
     }
-    else if(buttonTimer.AdvanceIfElapsed(0.25_s)) {        
+    else if(buttonTimer.AdvanceIfElapsed(0.1_s)) {        
         // Force the deque to only have the first 2 elements (buttons) in it
         previousButtons.resize(2);
 
@@ -290,8 +319,8 @@ void Robot::TeleopPeriodic() {
             factor = 0.2;
         }
         
-        shoulder.ManualControl(wpi::sgn(shoulderOverride) * -factor);
-        shoulder.AdjustFeedforward(0.3_V);
+        shoulder.ManualControl(wpi::sgn(shoulderOverride) * factor);
+        shoulder.AdjustFeedforward(0_V);
     }
     else {
         shoulder.ManualControl(0.0);
@@ -299,11 +328,7 @@ void Robot::TeleopPeriodic() {
 
     double wristOverride = frc::ApplyDeadband(auxController.GetRawAxis(constants::ButtonBoardAxis::eJoyStickAxisY), 0.10);
     if(wristOverride != 0) {
-        double factor = 0.25;
-        if(wristOverride > 0) {
-            factor = 0.15;
-        }
-
+        double factor = 0.3;
         wrist.ManualControl(wpi::sgn(wristOverride) * factor);
     }
     else {
@@ -313,7 +338,9 @@ void Robot::TeleopPeriodic() {
     // Use the ""fork"" up/down buttons in order to control the arm manually up/down
     if(auxController.GetRawButton(constants::ButtonBoardButtons::eForkUp)) arm.ManualControl(0.5);
     else if(auxController.GetRawButton(constants::ButtonBoardButtons::eForkDown)) arm.ManualControl(-0.5);
-    else arm.ManualControl(0.0);
+    else {
+        arm.ManualControl(0.0);
+    }
     
     // TODO: Implement extension limits
     frc::SmartDashboard::PutBoolean("cubeMode", intake.IsCubeMode());
@@ -321,29 +348,26 @@ void Robot::TeleopPeriodic() {
     if(frc::SmartDashboard::GetBoolean("extensionLimits", true)) {
         // Check whether or not the current kinematic state is illegal
         if(!kinematics::Kinematics::IsValid(!intake.IsCubeMode(), kinematicState)) {
-            FRC_ReportError(warn::Warning, "[Robot] Running into arm extension limits... Retracting in");
-            // arm.SetPositionGoal(arm.GetPosition() - 1_in);
+            FRC_ReportError(warn::Warning, "[Robot] Running into arm extension limits... Retracting arm in");
+            arm.ManualControl(0.0);
+            armGoal = arm.GetPosition() - 1_in;
         }
     }
 
-    arm.Tick();
-
-    if(shoulderOverride != 0) {
-        units::degree_t shoulderAngle = shoulder.GetRotation();
-
-        // Interpolate the max rotational velocity of the shoulder based on the current setpoint
-        units::radians_per_second_t shoulderVelocity = wpi::Lerp<units::radians_per_second_t>(
-            0_rad_per_s, 
-            shoulder::Constants::maxRotationalVelocity, 
-            ((shoulderSetpoint - shoulderAngle) / shoulder::Constants::maxRotation).value()
-        );
-
-        shoulder.SetRotationGoal(shoulderSetpoint);
-        shoulder.AdjustFeedforward(kinematics::Kinematics::CalculateShoulderFeedforward(arm.GetPosition(), shoulderSetpoint, shoulderVelocity));
+    frc::SmartDashboard::PutNumber("shoulderOverride", shoulderOverride);
+    // B is the panic button, if we've hit the panic button, move the arm up into the air
+    if(driveController.GetRawButton(constants::XboxButtons::eButtonB)) {
+        shoulderGoal = 90_deg;
+        armGoal = 0_m;
     }
-    
-    shoulder.Tick();
-    wrist.Tick();
+
+    if(auxController.GetRawButton(constants::ButtonBoardButtons::eGround)) {
+        armGoal = 0_m;        
+        shoulderGoal = -10_deg;
+    }
+
+    shoulder.SetRotationGoal(shoulderGoal);    
+    arm.SetPositionGoal(armGoal);
 
     if(wristOverride != 0) {
         wrist.SetRotationGoal(wrist.GetRotation());
@@ -355,6 +379,10 @@ void Robot::TeleopPeriodic() {
 void Robot::DisabledInit() {
     // For easier testing, when the robot first gets disabled, reinitialize the field constants (since it can change due to alliance color)
     fieldConstants.Initialize();
+
+    drivetrain.SetJoystick(false);
+    arm.ToggleControl(false);
+    shoulder.ToggleControl(false);
 }
 
 void Robot::DisabledPeriodic() {

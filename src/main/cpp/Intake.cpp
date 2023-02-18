@@ -2,6 +2,7 @@
 
 intake::Intake::Intake() {
     intakeMotor.SetSmartCurrentLimit(25);
+    intakeMotor.SetInverted(true);
 }
 
 void intake::Intake::ConeMode(){
@@ -27,7 +28,7 @@ void intake::Intake::Inhale() {
 
 void intake::Intake::Hold() {
     // Apply a small amount of voltage in order to keep the item in the claw
-    intakeMotor.Set(0.70);
+    intakeMotor.Set(0.0);
 }
 
 void intake::Intake::Spit() {

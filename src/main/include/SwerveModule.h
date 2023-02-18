@@ -36,7 +36,7 @@ namespace drive {
             static constexpr units::meters_per_second_t kMaxSpeed = 4.93776_mps;
         private:
             static constexpr double kGearRatio = (6.86 / 1.0);
-            static constexpr units::meter_t kWheelDiameter = 0.1016_m;
+            static constexpr units::meter_t kWheelDiameter = 0.0952_m;
             static constexpr units::meter_t kWheelCircumference = (kWheelDiameter * constants::Pi);
             static constexpr int kEncoderResolution = 2048;
 

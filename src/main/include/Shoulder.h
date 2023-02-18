@@ -10,8 +10,12 @@
 #include <frc/AnalogEncoder.h>
 #include <frc/AnalogInput.h>
 #include <frc/RobotController.h>
+#include <frc/trajectory/TrapezoidProfile.h>
 #include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/Timer.h>
+#include "Kinematics.h"
 #include "Constants.h"
+
 
 namespace shoulder {
 
@@ -32,9 +36,6 @@ namespace shoulder {
             /// @brief The gear ratio from the main encoder to the final sprocket/arm shaft
             static constexpr double gearRatio = 1 / 261.8182;
 
-            /// @brief The maximum rotational velocity of the arm, used for feedforward calculations
-            static constexpr units::radians_per_second_t maxRotationalVelocity = 1_deg_per_s;
-
             /// @brief The maximum achievable rotation of the arm
             static constexpr units::degree_t maxRotation = 272.1_deg;
     };
@@ -45,7 +46,7 @@ namespace shoulder {
             Shoulder();
             
             /// @brief Periodically updates the shoulder PID controller & navigates to the goal
-            void Tick();
+            void Tick(units::meter_t armExtension);
 
             /// @brief Gets the current rotation of the shoulder
             ///
@@ -101,5 +102,20 @@ namespace shoulder {
             bool bEnabled = false;
             double manualPercentage = 0.0;
             units::volt_t feedforward = 0_V;
+
+            /// @brief The trapezoidal profile constraints for the shoulder rotation
+            /// This specifies the max rotational velocity *and* the max rotational acceleration
+            /// Ideally this would be in the constants but it would not let me do that.
+            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 120_deg_per_s, 55_deg_per_s_sq };
+
+            /// @brief The current goal to rotate the shoulder to
+            frc::TrapezoidProfile<units::radians>::State shoulderGoal;
+
+            /// @brief The current setpoint for the shoulder rotation
+            frc::TrapezoidProfile<units::radians>::State shoulderSetpoint;
+
+            /// @brief A timer used for overriding the manual percentage vs the feedforward calculations
+            frc::Timer shoulderTimer;
+
     };
 }

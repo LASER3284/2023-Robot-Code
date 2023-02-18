@@ -10,6 +10,7 @@
 #include <tuple>
 #include <frc/Errors.h>
 #include <rev/CANSparkMaxLowLevel.h>
+#include <frc/trajectory/TrapezoidProfile.h>
 
 #include "FieldConstants.h"
 #include "SwerveModule.h"
@@ -70,6 +71,9 @@ class Robot : public frc::TimedRobot {
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::map<std::string, std::string> mTrajectoryMap {
             { "Test Path", "Test Path" },
+
+            { "Mobile", "Mobile"},
+            { "Far Mobile", "FarMobile" },
 
             { "Mobile Cone", "MobileCone"},
 

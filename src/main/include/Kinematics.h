@@ -22,7 +22,7 @@ namespace kinematics {
             static constexpr units::meter_t wheelToBellyPan = 4_in;
             static constexpr units::meter_t bellyPanToPivotPoint = 18_in;
 
-            static constexpr frc::Translation3d pivotPoint = { 0_m, 0_m, 0_m };
+            static constexpr frc::Translation3d pivotPoint = { 0_m, 0_m, bellyPanToPivotPoint + wheelToBellyPan };
     };
 
     struct KinematicState {
@@ -121,13 +121,12 @@ namespace kinematics {
             /// @param accel The acceleration setpoint in radians per second²
             /// @return The calculated feedforward in volts
             static const units::volt_t CalculateShoulderFeedforward(const units::meter_t extension, const units::radian_t angle, const units::radians_per_second_t velocity, const units::radians_per_second_squared_t accel = 0_rad_per_s_sq) {
-                const units::volt_t kS = ((-0.0611_V *  extension.value()) + 0.57817_V);
-                const units::volt_t kG = ((0.10971_V * extension.value()) + 0.49335_V);
+                //const units::volt_t kS = ((-0.0611_V *  extension.value()) + 0.57817_V);
+                const units::volt_t kG = ((0.10971_V * extension.value()) + 0.28335_V);
                 const auto kV =          ((0.17423_V * extension.value()) + 3.90020_V) / 1_rad_per_s;
                 const auto kA =          ((-0.83796_V * extension.value()) + 1.44075_V) / 1_rad_per_s_sq;
                 
-                return (kG * units::math::cos(angle));
-                //return (kS * wpi::sgn(velocity)) + (kG * units::math::cos(angle)) + (kV * velocity) + (kA * accel);
+                return (kG * units::math::cos(angle)) + (kV * velocity) + (kA * accel);
             }
     };
 }

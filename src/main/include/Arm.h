@@ -2,7 +2,12 @@
 #include <rev/CANSparkMax.h>
 #include <units/length.h>
 #include <frc/controller/ProfiledPIDController.h>
+#include <frc/controller/ElevatorFeedforward.h>
 #include <units/velocity.h>
+#include <units/voltage.h>
+#include <units/acceleration.h>
+#include <units/time.h>
+#include <frc/Timer.h>
 #include <frc/smartdashboard/SmartDashboard.h>
 
 namespace arm {
@@ -38,13 +43,21 @@ namespace arm {
             rev::CANSparkMax extensionMotor { Constants::kArmCANID, rev::CANSparkMaxLowLevel::MotorType::kBrushless};
             rev::SparkMaxRelativeEncoder extensionEncoder = extensionMotor.GetEncoder();
 
-            frc::ProfiledPIDController<units::meter> positionController { 
-                0.0, // kP
-                0.0, // kI
-                0.0, // kD
-                // The trapezoid profile provides a set of constraints for the PID controller to obey.
-                frc::TrapezoidProfile<units::meter>::Constraints { 1_mps, 1_mps / 1_s }
-            };
+            /// @brief The feedforward object for the extension of the arm (it acts an ""elevator"")
+            frc::ElevatorFeedforward feedforward { 0.52236_V, 0_V, 11.685_V / 1_mps, 2.9987_V / 1_mps_sq };
 
+            /// @brief The trapezoidal profile constraints for the shoulder rotation
+            /// This specifies the max rotational velocity *and* the max rotational acceleration
+            /// Ideally this would be in the constants but it would not let me do that.
+            frc::TrapezoidProfile<units::meters>::Constraints constraints { 4.75_mps, 4.75_mps_sq };
+
+            /// @brief The current goal to rotate the shoulder to
+            frc::TrapezoidProfile<units::meters>::State extensionGoal;
+
+            /// @brief The current setpoint for the shoulder rotation
+            frc::TrapezoidProfile<units::meters>::State extensionSetpoint;
+
+            /// @brief A timer used for overriding the manual percentage vs the feedforward calculations
+            frc::Timer controlTimer;
     };
 }
