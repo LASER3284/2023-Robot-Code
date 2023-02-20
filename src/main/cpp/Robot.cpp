@@ -51,6 +51,10 @@ void Robot::RobotPeriodic() {
 }
 
 void Robot::AutonomousInit() {
+    // When connected to the FMS, the FMS may not have sent the correct driver station alliance to the robot
+    // so we should reinitialize the field constants just to be safe.
+    fieldConstants.Initialize();
+
     currentAutonomousState = m_chooser.GetSelected();
     fmt::print("Currently selected auto path: {}\n", currentAutonomousState);
     if(currentAutonomousState == "Autonomous Idle") { 
@@ -69,6 +73,9 @@ void Robot::AutonomousPeriodic() {
 
     if(currentAutonomousState == "Autonomous Idle") {
         drivetrain.ForceStop();
+        // In idle mode, update the expected odometry pose to be based on the estimated apriltag position.
+        // This isn't as accurate as starting via using the known robot pose but we don't know the exact pose of the robot when in idle mode.
+        drivetrain.ForceVisionPose();
     }
     
     // All of these autos start with a preloaded cone and immediately score it
