@@ -286,10 +286,11 @@ void Robot::TeleopPeriodic() {
                     previousButtons.clear();
 
                     drivetrain.ForceStop();
-
+                    const frc::Translation2d drivePose = drivetrain.GetPose().Translation();
                     const auto state = kinematics::Kinematics::GetKinematicState(
                         !intake.IsCubeMode(), 
-                        frc::Pose3d(targetedScoringLocation + frc::Translation3d(0_in, 0_in, 5_in), frc::Rotation3d())
+                        targetedScoringLocation,
+                        drivePose
                     );
 
                     //shoulder.SetRotationGoal(state.shoulderAngle);

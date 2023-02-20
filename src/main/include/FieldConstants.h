@@ -58,7 +58,7 @@ namespace constants {
                     bool isCube = (row == 1 || row == 4 || row == 7);
                     
                     lowLocations[row] = { 
-                        frc::Translation3d(lowX, units::inch_t(nodeFirstY.value() + (nodeSeparationY.value() * row)), 0_in), 
+                        frc::Translation3d(lowX, units::inch_t(nodeFirstY.value() + (nodeSeparationY.value() * row)), 7.5_in), 
                         true
                     };
                     midLocations[row] = {
@@ -97,20 +97,22 @@ namespace constants {
 
                 // Flip based on alliance color
                 if(frc::DriverStation::GetAlliance() == frc::DriverStation::Alliance::kRed) {
-                    const auto flip3D = frc::Translation3d(fieldLength, 0_in, 0_in);
-                    const auto flip2D = frc::Translation2d(fieldLength, 0_in);
+                    const auto flip2D = frc::Translation2d(-fieldLength, 0_in);
                     for(int r = 0; r < nodeRowCount; r++) {
                         // In order to flip the location, just change the X location based on the field length when you're on the red alliance
-                        lowLocations[r].location        = flip3D - lowLocations[r].location;
-                        midLocations[r].location        = flip3D - midLocations[r].location;
-                        highLocations[r].location       = flip3D - highLocations[r].location;
-                        lowComplexLocations[r].location = flip3D - lowComplexLocations[r].location;
+                        lowLocations[r].location        = frc::Translation3d(fieldLength - lowLocations[r].location.X(), lowLocations[r].location.Y(), lowLocations[r].location.Z());
+                        midLocations[r].location        = frc::Translation3d(fieldLength - midLocations[r].location.X(), midLocations[r].location.Y(), midLocations[r].location.Z());
+                        highLocations[r].location       = frc::Translation3d(fieldLength - highLocations[r].location.X(), highLocations[r].location.Y(), highLocations[r].location.Z());
+                        lowComplexLocations[r].location = frc::Translation3d(fieldLength - lowComplexLocations[r].location.X(), lowComplexLocations[r].location.Y(), lowComplexLocations[r].location.Z());
                     }
 
                     for(int i = 0; i < 3; i++) {
-                        const auto bl = std::get<0>(gridLocations[i]);
-                        const auto tr = std::get<1>(gridLocations[i]);
-                        gridLocations[i] = { bl - flip2D, tr - flip2D };
+                        const frc::Translation2d bl = std::get<0>(gridLocations[i]);
+                        const frc::Translation2d tr = std::get<1>(gridLocations[i]);
+                        gridLocations[i] = { 
+                            frc::Translation2d(fieldLength - bl.X(), bl.Y()), 
+                            frc::Translation2d(fieldLength - tr.X(), tr.Y()) 
+                        };
                     }
                 }
             }

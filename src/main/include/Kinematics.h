@@ -6,23 +6,37 @@
 #include <units/angular_acceleration.h>
 #include <units/velocity.h>
 #include <units/voltage.h>
-
+#include <limits>
+#include <frc/geometry/Translation2d.h>
+#include <frc/geometry/Translation3d.h>
 #include <frc/geometry/Pose3d.h>
 
 namespace kinematics {    
     class Constants {
         public:
+            /// @brief The length of the intake in cone mode
             static constexpr units::meter_t coneModeLength = 12_in;
+
+            /// @brief The length of the intake in cube mode
             static constexpr units::meter_t cubeModeLength = 16.5_in;
 
-            static constexpr units::meter_t staticArmLength = 14_in;
-
+            /// @brief The horizontal offset from the edge of the robot of the center of the pivot point
             static constexpr units::meter_t pivotPointHorizontalOffset = 14_in;
 
+            /// @brief The length of the static arm (minimum extension) relative to the center of shoulder rotation
+            static constexpr units::meter_t staticArmLength = 40_in - pivotPointHorizontalOffset;
+
+            /// @brief The distance from the bottom of the wheel to the edge of the bellypan
             static constexpr units::meter_t wheelToBellyPan = 4_in;
+            
+            /// @brief The distance from the bellypan to the pivot point
             static constexpr units::meter_t bellyPanToPivotPoint = 18_in;
 
-            static constexpr frc::Translation3d pivotPoint = { 0_m, 0_m, bellyPanToPivotPoint + wheelToBellyPan };
+            /// @brief The height and location of the pivot point of the shoulder relative to the center of rotation of the robot
+            static constexpr frc::Translation3d pivotPoint = { 0_in, 0_m, bellyPanToPivotPoint + wheelToBellyPan };
+
+            /// @brief The maximum extension length for the arm
+            static constexpr units::meter_t maxArmExtension = 0.77_m;
     };
 
     struct KinematicState {
@@ -94,13 +108,25 @@ namespace kinematics {
                 return Constants::wheelToBellyPan + Constants::bellyPanToPivotPoint + he + hi < 72_in;
             }
 
-            static const KinematicState GetKinematicState(bool coneMode, frc::Pose3d intakePoint) {
+            static const KinematicState GetKinematicState(bool coneMode, frc::Translation3d intakePoint, frc::Translation2d robotPose) {
+                return GetKinematicState(coneMode, intakePoint, frc::Translation3d(robotPose.X(), robotPose.Y(), 0_m));
+            }
+
+            static const KinematicState GetKinematicState(bool coneMode, frc::Translation3d intakePoint, frc::Translation3d robotPose) {
                 const units::meter_t intakeLength = (coneMode ? Constants::coneModeLength : Constants::cubeModeLength);
 
-                const units::meter_t xO = intakePoint.X() - Constants::pivotPoint.X();
-                const units::meter_t zO = intakePoint.Z() - Constants::pivotPoint.Z();
+                // Intake location with respect to the robot pose
+                const frc::Translation3d intakeR = (intakePoint - robotPose);
 
-                const units::meter_t L = units::math::sqrt(units::math::pow<2>(xO) + units::math::pow<2>(zO)) - Constants::staticArmLength + intakeLength;
+                const units::meter_t xO = intakeR.X() - Constants::pivotPoint.X();
+                const units::meter_t zO = intakeR.Z() - Constants::pivotPoint.Z();
+
+                units::meter_t L = units::math::sqrt(units::math::pow<2>(xO) + units::math::pow<2>(zO)) - Constants::staticArmLength + intakeLength;
+
+                // If the arm is trying to extend further than the arm physically can, limit its extension
+                if(L > Constants::maxArmExtension) {
+                    L = Constants::maxArmExtension;
+                }
 
                 const units::radian_t shoulderTheta = units::math::asin((zO / (Constants::staticArmLength + L + intakeLength)));
 
@@ -108,7 +134,10 @@ namespace kinematics {
 
                 const units::meter_t intakeHeight = zO - wristHeight;
 
-                const units::radian_t intakeTheta = units::math::asin(intakeHeight / intakeLength);
+                // Get the angle of the wrist relative to the shoulder angle
+                units::radian_t intakeTheta = units::math::asin(intakeHeight / intakeLength) - shoulderTheta;
+                // Clamp the intake angle to be 0 if the angle is less than 0.5 degrees
+                intakeTheta = units::math::abs(intakeTheta) < 0.5_deg ? 0_rad : intakeTheta;
 
                 return KinematicState {  L, shoulderTheta, intakeTheta };
             }
