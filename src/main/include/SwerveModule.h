@@ -50,9 +50,9 @@ namespace drive {
             ctre::phoenix::sensors::CANCoder*               encoder;
 
             // TODO: Run drive-train characterization
-            frc2::PIDController drivePIDController { 0.00038489, 0.0, 0.0};
+            frc2::PIDController drivePIDController { 0.00036489, 0.0, 0.0};
             frc2::PIDController turnPIDController {
-                0.009, // P: 0.011
+                0.005, // P: 0.011
                 0.000, // I: 0.000
                 0.000, // D: 0.000
             };

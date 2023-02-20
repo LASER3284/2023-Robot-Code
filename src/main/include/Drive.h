@@ -103,10 +103,10 @@ namespace drive {
             frc::Joystick* controller;
             bool is_joystickControl;
 
-            SwerveModule frontleft  = SwerveModule(10, 12, 16);
-            SwerveModule frontright = SwerveModule(14, 17, 3);
-            SwerveModule backleft   = SwerveModule(7,  8, 15);
-            SwerveModule backright  = SwerveModule(11, 13, 2);
+            SwerveModule frontleft  = SwerveModule(3, 6, 10);
+            SwerveModule frontright = SwerveModule(1, 2, 9);
+            SwerveModule backleft   = SwerveModule(5, 8, 11);
+            SwerveModule backright  = SwerveModule(7, 4, 12);
 
             /// @brief Current heading for which to retain for holding straight lines / staying consistent
             frc::Rotation2d desiredHeading { 0_deg };
