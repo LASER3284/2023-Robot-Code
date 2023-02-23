@@ -25,7 +25,7 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
             shoulderTimer.Restart();
         }
         else {
-            if(shoulderGoal.position != shoulderSetpoint.position && shoulderTimer.HasElapsed(0.125_s)) {
+            if(units::math::abs(shoulderGoal.position - shoulderSetpoint.position) > 2.5_deg && shoulderTimer.HasElapsed(0.15_s)) {
                 // Create a motion profile with the given maximum velocity and maximum 
                 // acceleration constraints for the next setpoint, the desired goal, and the
                 // current setpoint.
@@ -43,7 +43,7 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
 
             frc::SmartDashboard::PutNumber("shoulderSetpoint_velocity", units::degrees_per_second_t(shoulderSetpoint.velocity).value());
             frc::SmartDashboard::PutNumber("shoulderSetpoint_position", units::degree_t(shoulderSetpoint.position).value());
-            frc::SmartDashboard::PutNumber("shoulderGoal_position", units::degree_t(shoulderSetpoint.position).value());
+            frc::SmartDashboard::PutNumber("shoulderGoal_position", units::degree_t(shoulderGoal.position).value());
 
             AdjustFeedforward(
                 kinematics::Kinematics::CalculateShoulderFeedforward(armExtension, GetRotation(), shoulderSetpoint.velocity)
@@ -65,7 +65,7 @@ void shoulder::Shoulder::SetRotationGoal(units::degree_t rot) {
 
 units::degree_t shoulder::Shoulder::GetRotation() {
     // TODO:: Make this actually good and not awful
-    return ((units::degree_t((-1289.09493 * encoder.GetAbsolutePosition())) + 116.30902_deg));
+    return ((units::degree_t((-1289.09493 * encoder.GetAbsolutePosition())) + 289.30902_deg));
 }
 
 units::degrees_per_second_t shoulder::Shoulder::GetVelocity() {

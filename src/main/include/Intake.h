@@ -36,6 +36,9 @@ namespace intake {
             /// @brief Spin the intake motor in reverse in order to spit out an element
             void Spit();
 
+            /// @brief Spin the motor in reverse to shoot out cones/cubes
+            void Shoot();
+
             /// @brief Stop spinning the intake motor
             void Stop();
 

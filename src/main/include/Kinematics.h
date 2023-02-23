@@ -121,12 +121,13 @@ namespace kinematics {
                 const units::meter_t xO = intakeR.X() - Constants::pivotPoint.X();
                 const units::meter_t zO = intakeR.Z() - Constants::pivotPoint.Z();
 
-                units::meter_t L = units::math::sqrt(units::math::pow<2>(xO) + units::math::pow<2>(zO)) - Constants::staticArmLength + intakeLength;
+                units::meter_t L = units::math::sqrt(units::math::pow<2>(xO) + units::math::pow<2>(zO)) - Constants::staticArmLength - intakeLength;
 
                 // If the arm is trying to extend further than the arm physically can, limit its extension
                 if(L > Constants::maxArmExtension) {
                     L = Constants::maxArmExtension;
                 }
+                if(L < 0_m) L = 0_m;
 
                 const units::radian_t shoulderTheta = units::math::asin((zO / (Constants::staticArmLength + L + intakeLength)));
 
@@ -152,10 +153,12 @@ namespace kinematics {
             static const units::volt_t CalculateShoulderFeedforward(const units::meter_t extension, const units::radian_t angle, const units::radians_per_second_t velocity, const units::radians_per_second_squared_t accel = 0_rad_per_s_sq) {
                 //const units::volt_t kS = ((-0.0611_V *  extension.value()) + 0.57817_V);
                 const units::volt_t kG = ((0.10971_V * extension.value()) + 0.28335_V);
-                const auto kV =          ((0.17423_V * extension.value()) + 3.90020_V) / 1_rad_per_s;
+                const auto kV =          ((0.17423_V * extension.value()) + 4.10020_V) / 1_rad_per_s;
                 const auto kA =          ((-0.83796_V * extension.value()) + 1.44075_V) / 1_rad_per_s_sq;
                 
-                return (kG * units::math::cos(angle)) + (kV * velocity) + (kA * accel);
+                // If the arm is 180deg around, the math for the feedforward is calculated with the opposite sign so we need to flip the sign
+                double sign = units::math::cos(angle).value() < 0 ? -1 : 1;
+                return (kG * units::math::cos(angle)) + ((kV * velocity) + (kA * accel) * sign);
             }
     };
 }
