@@ -35,6 +35,10 @@ void intake::Intake::Spit() {
     intakeMotor.Set(-0.5);
 }
 
+void intake::Intake::Shoot() {
+    intakeMotor.Set(-1.0);
+}
+
 void intake::Intake::Stop() {
     intakeMotor.Set(0.0);
 }

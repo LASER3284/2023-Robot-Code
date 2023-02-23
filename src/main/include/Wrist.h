@@ -9,6 +9,8 @@
 #include <frc/controller/PIDController.h>
 #include <frc/controller/ArmFeedforward.h>
 #include <frc/smartdashboard/SmartDashboard.h>
+#include <frc/trajectory/TrapezoidProfile.h>
+#include <frc/Timer.h>
 
 namespace wrist {
 
@@ -21,14 +23,11 @@ namespace wrist {
             static constexpr double kWristGearRatio = 90.0 * (24.0 / 36.0);
 
             /// @brief The starting angle for the wrist
-            static constexpr units::degree_t kStartingAngle = 90_deg;
+            static constexpr units::degree_t kStartingAngle = -145_deg;
 
-            static constexpr units::volt_t kG = 0.35_V;
-            static constexpr auto kV = 0.59_V / 1_rad_per_s;
-            static constexpr units::volt_t kS = 0.0_V;
-            static constexpr auto kA = 0.0_V / 1_rad_per_s_sq;
+            static constexpr units::volt_t kG = 0.70606_V;
+            static constexpr auto kV = 0.69_V / 1_rad_per_s;
 
-            static constexpr units::degrees_per_second_t kMaxRotationalVelocity = 10_deg_per_s;
             static constexpr units::degree_t kMaxAngle = 185_deg;
     };
 
@@ -38,12 +37,16 @@ namespace wrist {
             Wrist();
             
             /// @brief Calculates the percent output to set the motor to based on the angle of the wrist.
-            void Tick();
+            void Tick(units::degree_t shoulderRotation);
             
-            /// @brief Returns the rotation of the output shaft.
+            /// @brief Returns the current rotation of the output shaft.
             /// @return Rotation of output shaft, 0 degrees is parallel to the bottom of the frame.
             units::degree_t GetRotation();
             
+            /// @brief Returns the most recent commanded setpoint of the output shaft
+            /// @return The most recently commanded angle of the wrist
+            units::degree_t GetLastSetpoint() { return lastSetpoint; }
+
             /// @brief Sets the rotation goal for the PID controller and feed forward.
             ///
             /// Rotation should be 0 degrees parallel to the bottom of the frame in CCW+ orientation.
@@ -57,15 +60,29 @@ namespace wrist {
             rev::SparkMaxRelativeEncoder wristEncoder = wristMotor.GetEncoder();
 
             frc2::PIDController controller {
-                1.2374,    // kP
+                0.0,    // kP
                 0.0,    // kI
-                0.26825,    // kD
+                0.0,    // kD
             };
 
-            frc::ArmFeedforward feedforward { Constants::kS, Constants::kG, Constants::kV, Constants::kA };
-
             double manualPercentage = 0.0;
-            units::radian_t goal = 0_deg;
+
+            /// @brief The trapezoidal profile constraints for the shoulder rotation
+            /// This specifies the max rotational velocity *and* the max rotational acceleration
+            /// Ideally this would be in the constants but it would not let me do that.
+            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 120_deg_per_s, 360_deg_per_s_sq };
+
+            /// @brief The current goal to rotate the shoulder to
+            frc::TrapezoidProfile<units::radians>::State wristGoal;
+
+            /// @brief The current setpoint for the shoulder rotation
+            frc::TrapezoidProfile<units::radians>::State wristSetpoint;
+
+            /// @brief A timer used for overriding the manual percentage vs the feedforward calculations
+            frc::Timer wristTimer;
+            
+            /// @brief The last commanded setpoint for the wrist
+            units::degree_t lastSetpoint;
     };
 
 }

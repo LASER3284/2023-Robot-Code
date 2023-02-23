@@ -31,7 +31,7 @@ void arm::Arm::Tick() {
             controlTimer.Restart();
         }
         else {
-            if(extensionGoal.position != extensionSetpoint.position && controlTimer.HasElapsed(0.125_s)) {
+            if(extensionGoal.position != extensionSetpoint.position && controlTimer.HasElapsed(0.150_s)) {
                 // Create a motion profile with the given maximum velocity and maximum 
                 // acceleration constraints for the next setpoint, the desired goal, and the
                 // current setpoint.

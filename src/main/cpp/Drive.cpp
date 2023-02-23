@@ -296,7 +296,7 @@ void drive::Drive::SetTrajectory(frc::Pose2d pose) {
 void drive::Drive::SetTrajectory(const std::string& pathName, bool resetPose) {
     bFollowTrajectory = true;
 
-    subpaths = PathPlanner::loadPathGroup(pathName, { { 3.0_mps, 3.0_mps_sq } });
+    subpaths = PathPlanner::loadPathGroup(pathName, { { 3.0_mps, 1.5_mps_sq } });
     currentStopPoint = -1;
     
     StartNextTrajectory();

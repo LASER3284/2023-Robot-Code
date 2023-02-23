@@ -33,11 +33,13 @@ namespace constants {
             static constexpr units::inch_t nodeFirstY = 20.19_in;
             static constexpr units::inch_t nodeSeparationY = 22.0_in;
 
+            static constexpr units::inch_t additionalOffset = 15.5_in;
+
             static constexpr units::inch_t cubeEdgeHigh = 3.0_in;
-            static constexpr units::inch_t highCubeZ = 35.5_in - cubeEdgeHigh;
-            static constexpr units::inch_t midCubeZ =  23.5_in - cubeEdgeHigh;
-            static constexpr units::inch_t highConeZ = 46.0_in;
-            static constexpr units::inch_t midConeZ =  34.0_in;
+            static constexpr units::inch_t highCubeZ = 35.5_in - cubeEdgeHigh + additionalOffset;
+            static constexpr units::inch_t midCubeZ =  23.5_in - cubeEdgeHigh + additionalOffset;
+            static constexpr units::inch_t highConeZ = 46.0_in + additionalOffset;
+            static constexpr units::inch_t midConeZ =  34.0_in + additionalOffset;
 
             static constexpr units::inch_t complexLowXCones = outerX - units::inch_t(16 / 2);
             static constexpr units::inch_t complexLowXCubes = lowX; // Centered X under cube nodes
@@ -97,7 +99,6 @@ namespace constants {
 
                 // Flip based on alliance color
                 if(frc::DriverStation::GetAlliance() == frc::DriverStation::Alliance::kRed) {
-                    const auto flip2D = frc::Translation2d(-fieldLength, 0_in);
                     for(int r = 0; r < nodeRowCount; r++) {
                         // In order to flip the location, just change the X location based on the field length when you're on the red alliance
                         lowLocations[r].location        = frc::Translation3d(fieldLength - lowLocations[r].location.X(), lowLocations[r].location.Y(), lowLocations[r].location.Z());

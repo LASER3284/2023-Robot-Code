@@ -11,6 +11,7 @@
 #include <frc/Errors.h>
 #include <rev/CANSparkMaxLowLevel.h>
 #include <frc/trajectory/TrapezoidProfile.h>
+#include <frc/XboxController.h>
 
 #include "FieldConstants.h"
 #include "SwerveModule.h"
@@ -42,7 +43,7 @@ class Robot : public frc::TimedRobot {
 
     private:
         frc::Joystick driveController { 0 };
-        frc::GenericHID auxController { 2 };
+        frc::XboxController auxController { 1 };
 
         /// @brief A sendable chooser / dropdown for selecting the current autonomous trajectory
         frc::SendableChooser<std::string> m_chooser;
@@ -88,29 +89,28 @@ class Robot : public frc::TimedRobot {
 
         /// @brief An object that represents the locations of all the field elements
         constants::FieldConstants fieldConstants;
-
-        /// @brief A boolean to track whether or not the button timer has been started
-        bool buttonTimerStarted = false;
-
-        /// @brief A timer object used to track delays between button board presses
-        frc::Timer buttonTimer;
-
-        /// @brief A boolean tracking if the robot is currently trying to align to the current grid position
-        bool locationSelected = false;
-
+        
         /// @brief A boolean tracking if the robot is currently trying to align to the current grid position
         bool aligningToGrid = false;
+
+        /// @brief Whether or not the robot is currently trying to rotate the arm to the current scoring position
+        bool bAligningToScoringLocation = false;
 
         /// @brief The currently targeted scoring location to rotate the arm to
         /// This only applies when aligningToGrid is currently true
         frc::Translation3d targetedScoringLocation;
 
-        /// @brief What button was previously pressed
-        std::deque<constants::ButtonBoardButtons> previousButtons;
+        /// @brief Stores the most recent POV value given from the aux controller
+        double storedPOVValue = -1;
 
-        // A boolean mapping the pressed button board buttons to a boolean
-        std::array<bool, 12> pressedButtons = {};
+        frc::Timer POVDebouncer;
+
+        /// @brief Whether or not the robot was inside as of the last tick
+        bool bWasInCommunity = false;
 
         /// @brief A timer object used for timing the rumble of the main driving controller
         frc::Timer rumbleTimer;
+
+        /// @brief A timer object used to track the initial timing of the alignment process
+        frc::Timer alignmentTimer;
 };
