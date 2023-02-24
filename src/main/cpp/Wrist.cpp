@@ -3,6 +3,7 @@
 wrist::Wrist::Wrist() {
     wristMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
     wristMotor.SetSmartCurrentLimit(25);
+    wristMotor.SetInverted(true);
     wristEncoder.SetPosition(0);
     SetRotationGoal(GetRotation());
     wristTimer.Restart();

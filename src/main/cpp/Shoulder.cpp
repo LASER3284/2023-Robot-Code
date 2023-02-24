@@ -1,15 +1,25 @@
 #include "Shoulder.h"
 
 shoulder::Shoulder::Shoulder() {
-    motor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
-    motor.SetSmartCurrentLimit(60);
+    motor.SetNeutralMode(ctre::phoenix::motorcontrol::NeutralMode::Brake);
+    
+    // set stator current limit @ 60a
+    motor.ConfigSupplyCurrentLimit({ 
+        true, // Enable
+        40, // Continuous Current Limit
+        60, // Peak Current Limit
+        0.5 // Peak Current Duration
+    });
+    // set inverted =
+
     motor.SetInverted(false);
+    // make followerMotor follow motor
     followerMotor.Follow(motor);
 
     // Use the main encoder to ""zero"" out the NEO encoder
-    mainEncoder.SetPosition(
-        (GetRotation().value() / 360) / Constants::gearRatio
-    );
+    // Zero out the falcon encoder (use Constants::falconToDeg)
+    motor.ConfigIntegratedSensorInitializationStrategy(ctre::phoenix::sensors::SensorInitializationStrategy::BootToZero);
+    motor.ConfigIntegratedSensorOffset(GetRotation().value());
 
     frc::SmartDashboard::PutData("shoulder_encoder", &encoder);
 }
@@ -69,5 +79,5 @@ units::degree_t shoulder::Shoulder::GetRotation() {
 }
 
 units::degrees_per_second_t shoulder::Shoulder::GetVelocity() {
-    return units::degrees_per_second_t(mainEncoder.GetVelocity() * Constants::gearRatio * 360);
+    return units::degrees_per_second_t(constants::falconToRPM(motor.GetSelectedSensorVelocity(), Constants::gearRatio) * 360 * 60);
 }

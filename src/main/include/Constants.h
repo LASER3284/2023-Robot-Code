@@ -56,4 +56,9 @@ namespace constants {
         double m = position * (circumference.value() / (gearRatio * 2048));
         return units::meter_t(m);
     }
+
+    static units::degree_t falconToDeg(double position, double gearRatio) {
+        double m = position * (gearRatio * 2048);
+        return units::degree_t(m);
+    }
 }

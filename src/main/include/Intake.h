@@ -8,13 +8,13 @@ namespace intake {
     class Constants {
         public:
             /// @brief The CAN ID for the intake motor
-            static constexpr int kIntakeID = 60;
+            static constexpr int kIntakeID = 56;
 
             /// @brief The solenoid port/ID for the intake
-            static constexpr int kIntakeSolenoidID1 = 6;
+            static constexpr int kIntakeSolenoidID1 = 8;
 
             /// @brief The solenoid port/ID for the intake mode
-            static constexpr int kIntakeSolenoidID2 = 7;
+            static constexpr int kIntakeSolenoidID2 = 9;
     };
 
     class Intake {

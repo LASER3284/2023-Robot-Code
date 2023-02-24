@@ -17,7 +17,7 @@ namespace wrist {
     class Constants {
         public:
             /// @brief The CAN ID of the SparkMAX to use for the NEO 550 on the wrist.
-            static constexpr int kWristMotorID = 56;
+            static constexpr int kWristMotorID = 60;
 
             /// @brief The gear ratio from the NEO 550 to the output of the wrist.
             static constexpr double kWristGearRatio = 90.0 * (24.0 / 36.0);

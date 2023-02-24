@@ -350,7 +350,7 @@ void Robot::TeleopPeriodic() {
 
     // Use the ""fork"" up/down buttons in order to control the arm manually up/down
     if(auxController.GetAButton()) arm.ManualControl(0.5);
-    else if(auxController.GetXButton()) arm.ManualControl(-0.5);
+    else if(auxController.GetBButton()) arm.ManualControl(-0.5);
     else {
         arm.ManualControl(0.0);
     }
@@ -378,7 +378,7 @@ void Robot::TeleopPeriodic() {
         armGoal = 0_m;
     }
 
-    if(auxController.GetBButton()) {
+    if(auxController.GetXButton()) {
         armGoal = 0_m;
         shoulderGoal = -40_deg;
         wristGoal = 25_deg;

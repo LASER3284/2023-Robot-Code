@@ -1,6 +1,5 @@
 #pragma once
 
-#include <rev/CANSparkMax.h>
 #include <units/angle.h>
 #include <units/angular_velocity.h>
 #include <units/angular_acceleration.h>
@@ -13,6 +12,7 @@
 #include <frc/trajectory/TrapezoidProfile.h>
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/Timer.h>
+#include <ctre/phoenix/motorcontrol/can/WPI_TalonFX.h>
 #include "Kinematics.h"
 #include "Constants.h"
 
@@ -21,10 +21,10 @@ namespace shoulder {
 
     class Constants {
         public:
-            /// @brief CAN ID for the SparkMAX to be used for the NEO on the shoulder.
+            /// @brief CAN ID for the TalonFX to be used for the NEO on the shoulder.
             static constexpr int kShoulderMotorID = 18;
 
-            /// @brief The CAN id for the follower spark max motor
+            /// @brief The CAN id for the follower TalonFX motor
             static constexpr int kShoulderFollowerID = 35;
 
             /// @brief PWM Slot ID for the encoder to be used to measure the angle of the arm on the shoulder.
@@ -84,11 +84,21 @@ namespace shoulder {
 
         private:
             /// @brief The main motor for driving the rotation of the shoulder
-            rev::CANSparkMax motor { Constants::kShoulderMotorID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
-            rev::SparkMaxRelativeEncoder mainEncoder = motor.GetEncoder();
+            ctre::phoenix::motorcontrol::can::WPI_TalonFX motor { Constants::kShoulderMotorID };
 
             /// @brief The secondary follower motor for rotating the shoulder
-            rev::CANSparkMax followerMotor { Constants::kShoulderFollowerID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
+            ctre::phoenix::motorcontrol::can::WPI_TalonFX followerMotor { Constants::kShoulderFollowerID };
+
+
+
+
+
+
+
+
+
+
+
 
             /// @brief The absolute encoder (thrifty encoder) used for locating the shoulder
             frc::AnalogEncoder encoder { Constants::kShoulderPortID };
