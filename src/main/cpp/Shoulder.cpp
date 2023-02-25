@@ -2,18 +2,18 @@
 
 shoulder::Shoulder::Shoulder() {
     motor.SetNeutralMode(ctre::phoenix::motorcontrol::NeutralMode::Brake);
-    
-    // set stator current limit @ 60a
-    motor.ConfigSupplyCurrentLimit({ 
+    followerMotor.SetNeutralMode(ctre::phoenix::motorcontrol::NeutralMode::Brake);
+
+    const ctre::phoenix::motorcontrol::SupplyCurrentLimitConfiguration currentLimit = { 
         true, // Enable
         40, // Continuous Current Limit
         60, // Peak Current Limit
         0.5 // Peak Current Duration
-    });
-    // set inverted =
-
+    };
+    motor.ConfigSupplyCurrentLimit(currentLimit);
+    followerMotor.ConfigSupplyCurrentLimit(currentLimit);
+    
     motor.SetInverted(false);
-    // make followerMotor follow motor
     followerMotor.Follow(motor);
 
     // Use the main encoder to ""zero"" out the NEO encoder
@@ -75,7 +75,7 @@ void shoulder::Shoulder::SetRotationGoal(units::degree_t rot) {
 
 units::degree_t shoulder::Shoulder::GetRotation() {
     // TODO:: Make this actually good and not awful
-    return ((units::degree_t((-1289.09493 * encoder.GetAbsolutePosition())) + 289.30902_deg));
+    return ((units::degree_t((-1289.09493 * encoder.GetAbsolutePosition())) + 260.30902_deg));
 }
 
 units::degrees_per_second_t shoulder::Shoulder::GetVelocity() {

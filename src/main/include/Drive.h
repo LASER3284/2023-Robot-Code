@@ -40,15 +40,15 @@ namespace drive {
             static constexpr units::meters_per_second_t  maxTranslationalVelocity = 4.93776_mps;
             static constexpr units::radians_per_second_t maxRotationalVelocity = 700_deg_per_s;
 
-            static constexpr double kTrajectoryX_P = 7.25;
+            static constexpr double kTrajectoryX_P = 2.5;
             static constexpr double kTrajectoryX_I = 0.0;
             static constexpr double kTrajectoryX_D = 0.0;
 
-            static constexpr double kTrajectoryY_P = 7.25;
+            static constexpr double kTrajectoryY_P = 2.5;
             static constexpr double kTrajectoryY_I = 0.0;
             static constexpr double kTrajectoryY_D = 0.0;
 
-            static constexpr double kTrajectoryTheta_P = 7.25;
+            static constexpr double kTrajectoryTheta_P = 4.75;
             static constexpr double kTrajectoryTheta_I = 0.0;
             static constexpr double kTrajectoryTheta_D = 0.0;
     };
@@ -103,9 +103,9 @@ namespace drive {
             frc::Joystick* controller;
             bool is_joystickControl;
 
-            SwerveModule frontleft  = SwerveModule(10, 12, 16);
-            SwerveModule frontright = SwerveModule(14, 17, 3);
-            SwerveModule backleft   = SwerveModule(7,  8, 15);
+            SwerveModule frontleft  = SwerveModule(14, 61, 3);
+            SwerveModule frontright = SwerveModule(10, 33, 16);
+            SwerveModule backleft   = SwerveModule(7,  62, 15);
             SwerveModule backright  = SwerveModule(11, 13, 2);
 
             /// @brief Current heading for which to retain for holding straight lines / staying consistent

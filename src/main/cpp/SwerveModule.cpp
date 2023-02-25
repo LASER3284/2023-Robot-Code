@@ -59,7 +59,7 @@ void drive::SwerveModule::SetDesiredState(const frc::SwerveModuleState& refstate
 
     // Calculate the drive output from the drive PID controller.
     const auto driveOutput = drivePIDController.Calculate(
-        drivemotor->GetSelectedSensorVelocity(),
+        constants::falconToMPS(drivemotor->GetSelectedSensorVelocity(), kWheelCircumference, kGearRatio).value(),
         state.speed.value()
     );
 

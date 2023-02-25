@@ -89,17 +89,6 @@ namespace shoulder {
             /// @brief The secondary follower motor for rotating the shoulder
             ctre::phoenix::motorcontrol::can::WPI_TalonFX followerMotor { Constants::kShoulderFollowerID };
 
-
-
-
-
-
-
-
-
-
-
-
             /// @brief The absolute encoder (thrifty encoder) used for locating the shoulder
             frc::AnalogEncoder encoder { Constants::kShoulderPortID };
 

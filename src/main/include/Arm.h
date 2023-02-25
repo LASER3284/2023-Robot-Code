@@ -44,12 +44,12 @@ namespace arm {
             rev::SparkMaxRelativeEncoder extensionEncoder = extensionMotor.GetEncoder();
 
             /// @brief The feedforward object for the extension of the arm (it acts an ""elevator"")
-            frc::ElevatorFeedforward feedforward { 0.52236_V, 0_V, 11.685_V / 1_mps, 2.9987_V / 1_mps_sq };
+            frc::ElevatorFeedforward feedforward { 0.49542_V, 0_V, 14.539_V / 1_mps, 0.80597_V / 1_mps_sq };
 
             /// @brief The trapezoidal profile constraints for the shoulder rotation
             /// This specifies the max rotational velocity *and* the max rotational acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::meters>::Constraints constraints { 4.75_mps, 4.75_mps_sq };
+            frc::TrapezoidProfile<units::meters>::Constraints constraints { 0.1_mps, 0.1_mps_sq };
 
             /// @brief The current goal to rotate the shoulder to
             frc::TrapezoidProfile<units::meters>::State extensionGoal;
