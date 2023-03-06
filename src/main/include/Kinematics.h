@@ -16,10 +16,10 @@ namespace kinematics {
     class Constants {
         public:
             /// @brief The length of the intake in cone mode
-            static constexpr units::meter_t coneModeLength = 12_in;
+            static constexpr units::meter_t coneModeLength = 13_in;
 
             /// @brief The length of the intake in cube mode
-            static constexpr units::meter_t cubeModeLength = 16.5_in;
+            static constexpr units::meter_t cubeModeLength = 17.5_in;
 
             /// @brief The horizontal offset from the edge of the robot of the center of the pivot point
             static constexpr units::meter_t pivotPointHorizontalOffset = 14_in;
@@ -58,14 +58,14 @@ namespace kinematics {
 
                 // di is the horizontal extension of the wrist
                 units::meter_t di = 0_m;
-                if(state.wristAngle != 90_deg) {
+                if(state.wristAngle != 0_deg && state.wristAngle != 180_deg) {
                     units::radian_t C = units::radian_t( (180_deg - units::math::abs(state.wristAngle) - 90_deg) );
                     di = (
                         intakeLength * units::math::sin(C) / 
                         units::math::sin(90_deg)
                     );
                 }
-                else if(state.wristAngle == 90_deg) {
+                else {
                     di = intakeLength;
                 }
 
@@ -94,19 +94,19 @@ namespace kinematics {
 
                 // hi is the vertical extension of the intake
                 units::meter_t hi = 0_m;
-                if(state.wristAngle != 180_deg && state.wristAngle != 0_deg) {
+                if(state.wristAngle != 90_deg) {
                     hi = units::meter_t(
                         sqrt(
                             pow(intakeLength.value(), 2) - pow(di.value(), 2)
                         )
                     );
                 }
-                else if(state.wristAngle == 180_deg) {
+                else {
                     hi = di;
                 }
-
+                const auto verticalExtension = Constants::wheelToBellyPan + Constants::bellyPanToPivotPoint + he + hi;
                 // Check the vertical extension and return true if we're less than 72in
-                return Constants::wheelToBellyPan + Constants::bellyPanToPivotPoint + he + hi < 72_in;
+                return verticalExtension < 68_in;
             }
 
             static const KinematicState GetKinematicState(bool coneMode, frc::Translation3d intakePoint, frc::Translation2d robotPose) {

@@ -33,6 +33,8 @@ namespace intake {
             /// @brief Start the intake motor in order to start intaking things at 90% speed
             void Inhale();
 
+            void SmallSpit();
+
             /// @brief Spin the intake motor in reverse in order to spit out an element
             void Spit();
 

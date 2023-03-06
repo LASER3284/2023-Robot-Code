@@ -33,9 +33,10 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
         if(manualPercentage != 0.0) {
             motor.SetVoltage(manualPercentage * 12_V);
             shoulderTimer.Restart();
+            angleController.Reset();
         }
         else {
-            if(units::math::abs(shoulderGoal.position - shoulderSetpoint.position) > 2.5_deg && shoulderTimer.HasElapsed(0.15_s)) {
+            if(shoulderGoal.position != GetRotation() && shoulderTimer.HasElapsed(0.15_s)) {
                 // Create a motion profile with the given maximum velocity and maximum 
                 // acceleration constraints for the next setpoint, the desired goal, and the
                 // current setpoint.
@@ -48,6 +49,7 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
                 shoulderSetpoint = rotationalProfile.Calculate(20_ms);
             }
             else {
+                angleController.Reset();
                 shoulderSetpoint = { GetRotation(), 0_deg_per_s };
             }
 
@@ -59,10 +61,17 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
                 kinematics::Kinematics::CalculateShoulderFeedforward(armExtension, GetRotation(), shoulderSetpoint.velocity)
             );
 
-            motor.SetVoltage(feedforward + units::volt_t(angleController.Calculate(GetRotation().value())));
+            const auto control_effort_v = angleController.Calculate(units::radian_t(GetRotation()).value(), shoulderSetpoint.position.value());
+
+            frc::SmartDashboard::PutNumber("shoulder_effort_v", control_effort_v);
+            frc::SmartDashboard::PutNumber("shoulder_measurement", units::radian_t(GetRotation()).value());
+            frc::SmartDashboard::PutNumber("shoulder_setpoint", shoulderSetpoint.position.value());
+
+            motor.SetVoltage(feedforward + units::volt_t(control_effort_v));
         }
     }
     else {
+        angleController.Reset();
         shoulderTimer.Restart();
         motor.SetVoltage(0_V);
     }
@@ -74,8 +83,14 @@ void shoulder::Shoulder::SetRotationGoal(units::degree_t rot) {
 }
 
 units::degree_t shoulder::Shoulder::GetRotation() {
-    // TODO:: Make this actually good and not awful
-    return ((units::degree_t((-1289.09493 * encoder.GetAbsolutePosition())) + 260.30902_deg));
+    auto rollover_deg = units::degree_t((360 * (encoder.GetAbsolutePosition() - encoder.GetPositionOffset())));
+    if(rollover_deg > 360_deg) {
+        rollover_deg -= 360_deg;
+    }
+    rollover_deg -= Constants::kAngleOffset;
+    // Multiply by -1 for CCW+
+    rollover_deg *= -1;
+    return rollover_deg;
 }
 
 units::degrees_per_second_t shoulder::Shoulder::GetVelocity() {

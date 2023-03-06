@@ -2,17 +2,17 @@
   "waypoints": [
     {
       "anchorPoint": {
-        "x": 1.920086975565876,
-        "y": 0.5331476696207564
+        "x": 1.9097798879358443,
+        "y": 0.5252817343241527
       },
       "prevControl": null,
       "nextControl": {
-        "x": 2.9200869755658747,
-        "y": 0.5331476696207564
+        "x": 2.909779887935843,
+        "y": 0.5252817343241527
       },
-      "holonomicAngle": 180.0,
+      "holonomicAngle": 0.0,
       "isReversal": false,
-      "velOverride": null,
+      "velOverride": 0.1,
       "isLocked": false,
       "isStopPoint": false,
       "stopEvent": {
@@ -24,20 +24,20 @@
     },
     {
       "anchorPoint": {
-        "x": 6.5089651319445165,
-        "y": 0.9234879277359507
+        "x": 6.774345514502994,
+        "y": 0.9249526191360088
       },
       "prevControl": {
-        "x": 5.5089651319445165,
-        "y": 0.9234879277359507
+        "x": 5.774345514502994,
+        "y": 0.9249526191360088
       },
       "nextControl": {
-        "x": 7.5089651319445165,
-        "y": 0.9234879277359507
+        "x": 7.774345514502994,
+        "y": 0.9249526191360088
       },
-      "holonomicAngle": 0,
+      "holonomicAngle": 0.0,
       "isReversal": false,
-      "velOverride": null,
+      "velOverride": 0.1,
       "isLocked": false,
       "isStopPoint": true,
       "stopEvent": {
@@ -49,15 +49,15 @@
     },
     {
       "anchorPoint": {
-        "x": 1.920086975565876,
-        "y": 0.9520494100370629
+        "x": 1.9097798879358443,
+        "y": 1.107659309335713
       },
       "prevControl": {
-        "x": 2.8818309394338497,
-        "y": 0.5045861873196431
+        "x": 2.8715238518038184,
+        "y": 0.6601960866182932
       },
       "nextControl": null,
-      "holonomicAngle": 180.0,
+      "holonomicAngle": 0.0,
       "isReversal": false,
       "velOverride": null,
       "isLocked": false,
@@ -70,5 +70,8 @@
       }
     }
   ],
+  "maxVelocity": 1.0,
+  "maxAcceleration": 1.0,
+  "isReversed": null,
   "markers": []
 }

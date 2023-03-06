@@ -36,6 +36,8 @@ namespace arm {
             void ToggleControl(bool enable) { bEnabled = enable; }
 
             void ManualControl(double percentage) { manualPercentage = percentage; }
+
+            void RefreshController() { extensionSetpoint = { GetPosition(), 0_mps }; }
         private:
             bool bEnabled = false;
             double manualPercentage = 0.0;
@@ -44,12 +46,14 @@ namespace arm {
             rev::SparkMaxRelativeEncoder extensionEncoder = extensionMotor.GetEncoder();
 
             /// @brief The feedforward object for the extension of the arm (it acts an ""elevator"")
-            frc::ElevatorFeedforward feedforward { 0.49542_V, 0_V, 14.539_V / 1_mps, 0.80597_V / 1_mps_sq };
+            frc::ElevatorFeedforward feedforward { 0.42743_V, 0_V, 15.224_V / 1_mps, 0.72115_V / 1_mps_sq };
+
+            frc::PIDController positionController { 33.389, 0, 2.1352 };
 
             /// @brief The trapezoidal profile constraints for the shoulder rotation
             /// This specifies the max rotational velocity *and* the max rotational acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::meters>::Constraints constraints { 0.1_mps, 0.1_mps_sq };
+            frc::TrapezoidProfile<units::meters>::Constraints constraints { 0.5_mps, 0.25_mps_sq };
 
             /// @brief The current goal to rotate the shoulder to
             frc::TrapezoidProfile<units::meters>::State extensionGoal;
@@ -59,5 +63,7 @@ namespace arm {
 
             /// @brief A timer used for overriding the manual percentage vs the feedforward calculations
             frc::Timer controlTimer;
+
+            units::meter_t lastGoal;
     };
 }

@@ -73,19 +73,32 @@ class Robot : public frc::TimedRobot {
         const std::map<std::string, std::string> mTrajectoryMap {
             { "Test Path", "Test Path" },
 
+            { "Mid Idle", "MidIdle"},
+
             { "Mobile", "Mobile"},
             { "Far Mobile", "FarMobile" },
 
+            { "Mid Balance", "MidBalance"},
+
             { "Mobile Cone", "MobileCone"},
+            { "Far Mobile Cone", "FarMobileCone"},
+
+            { "Far Cone Balance", "FarConeBalance"},
 
             { "Cone Cube - Balance", "ConeCubeBalance" },
             { "Cone Cube", "ConeCubeNoBalance" },
 
             { "Far Cone Cube - Balance", "FarConeCubeBalance"},
-            { "Far Cone Cube", "FarConeCubeNoBalance"},
+            { "Far Cone Cube", "FarConeCube"},
 
-            { "Far Triple Score", "FarTripleScore"}
+            // { "Far Triple Score", "FarTripleScore"}
         };
+
+        /// @brief Whether or not the robot has processed the starting action within auto
+        bool bHasProcessedStartingAction = false;
+
+        /// @brief Whether or not the drive train has been force stopped for auto
+        bool bDriveTrainStopped = false;
 
         /// @brief An object that represents the locations of all the field elements
         constants::FieldConstants fieldConstants;
@@ -113,4 +126,18 @@ class Robot : public frc::TimedRobot {
 
         /// @brief A timer object used to track the initial timing of the alignment process
         frc::Timer alignmentTimer;
+
+        /// @brief A timer object used to track the delay for flipping rotational controls.
+        /// If the controller has not been touched for x amount of seconds, flip the voltage signs.
+        frc::Timer rotationalTimer;
+
+        bool rotationalFlip = false;
+
+        /// @brief A timer used for tracking time durations during auto in order to avoid ""race conditions"" in robot actions
+        frc::Timer autoTimer;
+
+        bool autoTimerRunning = false;
+
+        bool bHasAutoBalanced = false;
+        bool bHasStartedBalancing = false;
 };

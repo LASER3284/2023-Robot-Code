@@ -48,6 +48,8 @@ void Robot::RobotPeriodic() {
     shoulder.Tick(arm.GetPosition());
     arm.Tick();
     wrist.Tick(shoulder.GetRotation());
+
+    frc::SmartDashboard::PutNumber("autoTimer_s", autoTimer.Get().value());
 }
 
 void Robot::AutonomousInit() {
@@ -60,18 +62,36 @@ void Robot::AutonomousInit() {
     if(currentAutonomousState == "Autonomous Idle") { 
         drivetrain.ForceVisionPose(); 
     }
-    else { 
+    else if(currentAutonomousState != "MidIdle") { 
         drivetrain.SetTrajectory(currentAutonomousState, true); 
     }
 
     shoulder.ToggleControl(true);
+    arm.ToggleControl(true);
+
+    bDriveTrainStopped = false;
+    bHasProcessedStartingAction = false;
+    bHasAutoBalanced = false;
+    bHasStartedBalancing = false;
+
+    wrist.RefreshController();
+    shoulder.RefreshController();
+    arm.RefreshController();
+    
+    autoTimer.Stop();
+    autoTimer.Reset();
 }
 
 void Robot::AutonomousPeriodic() {
+    frc::SmartDashboard::PutString("currentAutonomousState", currentAutonomousState);
+    frc::SmartDashboard::PutBoolean("bHasStartedBalancing", bHasStartedBalancing);
+    frc::SmartDashboard::PutBoolean("bHasAutoBalanced", bHasAutoBalanced);
+
     units::degree_t shoulderGoal = shoulder.GetRotation();
     units::meter_t armGoal = arm.GetPosition();
     units::degree_t wristGoal = wrist.GetRotation();
 
+    bool bForceStop = false;
     if(currentAutonomousState == "Autonomous Idle") {
         drivetrain.ForceStop();
         // In idle mode, update the expected odometry pose to be based on the estimated apriltag position.
@@ -80,44 +100,164 @@ void Robot::AutonomousPeriodic() {
     }
     
     // All of these autos start with a preloaded cone and immediately score it
-    if(currentAutonomousState == "MobileCone" || currentAutonomousState == "ConeCubeBalance" || 
-        currentAutonomousState == "ConeCube"  || currentAutonomousState == "FarConeCubeBalance" ||
-        currentAutonomousState == "FarTripleScore") {
-        // TODO: Score the preloaded cone and return if we're still holding a cone
+    if(!bHasProcessedStartingAction) {
+        if(currentAutonomousState == "MidIdle") {
+            shoulderGoal = 151_deg;
+            armGoal = 0.18_m;
+            wristGoal = 17_deg;
+
+            if(units::math::abs(shoulder.GetRotation() - shoulderGoal) < 6.5_deg && 
+                units::math::abs(armGoal - arm.GetPosition()) < 3.5_in) {
+                autoTimer.Start();
+            }
+
+            if(autoTimer.HasElapsed(0.5_s)) {
+                intake.CubeMode();
+            }
+
+            if(autoTimer.HasElapsed(1.25_s)) {
+                shoulderGoal = 90_deg;
+                armGoal = 0_m;
+                wristGoal = 0_deg;
+            }
+        }
+        else if(currentAutonomousState == "MobileCone" || currentAutonomousState == "ConeCubeBalance" || 
+            currentAutonomousState == "ConeCube"  || currentAutonomousState == "FarConeCubeBalance" || currentAutonomousState == "FarConeCube" ||
+            currentAutonomousState == "FarTripleScore" || currentAutonomousState == "FarMobileCone" || currentAutonomousState == "FarConeBalance") {
+
+            shoulderGoal = 170_deg;
+            wristGoal = 0_deg;
+            armGoal = 0.74_m;
+    
+            if(units::math::abs(shoulder.GetRotation() - shoulderGoal) < 6.25_deg && 
+                units::math::abs(armGoal - arm.GetPosition()) < 2.5_in) {
+                    autoTimer.Start();
+                }
+            if(autoTimer.HasElapsed(0.25_s)) {
+                intake.SmallSpit();
+                autoTimerRunning = true;
+
+            }
+            // Wait for about 0.5s in order to start driving away
+            if(autoTimer.HasElapsed(0.5_s)) {
+                bHasProcessedStartingAction = true;
+                autoTimer.Reset();
+                autoTimer.Stop();
+            }
+        }
+
+        // Autos that do nothing at all at the start
+        if(currentAutonomousState == "MidBalance") { bHasProcessedStartingAction = true; }
     }
+    else if(!bDriveTrainStopped) {
+        const drive::AutonomousState trajectoryCompleted = drivetrain.FollowTrajectory();
+        SmartDashboard::PutBoolean("bAtStopPoint", trajectoryCompleted.bAtStopPoint);
+        SmartDashboard::PutBoolean("bCompletedPath", trajectoryCompleted.bCompletedPath);
 
-    const drive::AutonomousState trajectoryCompleted = drivetrain.FollowTrajectory();
-    SmartDashboard::PutBoolean("bAtStopPoint", trajectoryCompleted.bAtStopPoint);
-    SmartDashboard::PutBoolean("bCompletedPath", trajectoryCompleted.bCompletedPath);
-
-    // By default, if the trajectory is completed, we might as well stop the drive train.
-    bool bForceStop = trajectoryCompleted.bCompletedPath;
-    if(trajectoryCompleted.bAtStopPoint) {
         // All of these autos end up picking up the preloaded cube
-        if((currentAutonomousState == "ConeCube" || currentAutonomousState == "ConeCubeBalance") || 
-            (currentAutonomousState == "FarConeCube" || currentAutonomousState == "FarConeCubeBalance") ||
-            (currentAutonomousState == "FarTripleScore")) {
-            if(trajectoryCompleted.currentStopIndex == 1) {
-                // TODO: Pick up the staged cube
-            }
+        if(!trajectoryCompleted.bAtStopPoint) {
+            if((currentAutonomousState == "ConeCube" || currentAutonomousState == "ConeCubeBalance") || 
+                (currentAutonomousState == "FarConeCube" || currentAutonomousState == "FarConeCubeBalance") ||
+                (currentAutonomousState == "FarTripleScore") || currentAutonomousState == "FarConeCube") {
+                if(trajectoryCompleted.currentStopIndex == 0) {
+                    intake.CubeMode();
+                    wristGoal = 20_deg;
+                    shoulderGoal = -4_deg;
+                    armGoal = 0.58_m;
 
-            else if(trajectoryCompleted.currentStopIndex == 2) {
-                // TODO: Score the loaded cube
+                    // If we've picked something up, start the next trajectory
+                    if(intake.HasElement()) {
+                        drivetrain.StartNextTrajectory();
+                        return;
+                    }
+                }
+                else if(trajectoryCompleted.currentStopIndex == 1) {
+                    armGoal = 0_m;
+                    shoulderGoal = 150_deg;
+                    wristGoal = 20_deg;
+                }
             }
         }
-        else if(currentAutonomousState == "FarTripleScore") {
-            if(trajectoryCompleted.currentStopIndex == 3) {
-                // TODO: Pickup the staged cone
+
+        // By default, if the trajectory is completed, we might as well stop the drive train.
+        bool bForceStop = trajectoryCompleted.bCompletedPath;
+        if(trajectoryCompleted.bAtStopPoint) {
+            autoTimer.Start();
+            
+            // All of these autos end up picking up the preloaded cube
+            if((currentAutonomousState == "ConeCube" || currentAutonomousState == "ConeCubeBalance") || 
+                (currentAutonomousState == "FarConeCube" || currentAutonomousState == "FarConeCubeBalance") ||
+                (currentAutonomousState == "FarTripleScore")) {
+                if(trajectoryCompleted.currentStopIndex == 0) {
+                    drivetrain.StartNextTrajectory();
+                }
+
+                else if(trajectoryCompleted.currentStopIndex == 1) {
+                    intake.Spit();
+                }
             }
-            else if(trajectoryCompleted.currentStopIndex == 4) {
-                // TODO: Place the cone
+            else if(currentAutonomousState == "FarConeBalance" || currentAutonomousState == "MidBalance") {
+                bDriveTrainStopped = true;
             }
         }
     }
+    else if(currentAutonomousState == "FarConeBalance" || currentAutonomousState == "MidBalance") {
+        // Move the arm down and start driving forward in order to shift the CoG towards the charge station
+        shoulderGoal = 5_deg;
+        bForceStop = bHasAutoBalanced;
+        if(!bHasStartedBalancing || !bHasAutoBalanced) {
+            const auto pitch = drivetrain.GetPitch();
 
+            // Start driving until we hit ~5 deg of pitch in order to become engaged
+            if(!bHasStartedBalancing) {
+                drivetrain.DriveRelative(0.5);
+            }
+            
+            // If we've hit -5deg of pitch, we're on the ramp, start driving forward and start the balancing process and get ready to stop driving
+            if(units::math::abs(drivetrain.GetPitch()) > 5_deg && !bHasStartedBalancing) {
+                bHasStartedBalancing = true;
+            }
+
+            if(bHasStartedBalancing) {
+                // If we're within ~2.5 degrees in general, stop driving the wheels
+                if(units::math::abs(pitch) < 2_deg) {
+                    bHasAutoBalanced = true;
+                    bForceStop = true;
+                    drivetrain.XPattern();
+                    drivetrain.ForceStop();
+                }
+                else {
+                    const double powerSign = pitch > 0_deg ? -1 : 1;
+                    const units::degree_t maxPitch = 30_deg;
+                    
+                    // Calculate a value between -1 and 1 based on the value of the min/max pitch
+                    // This does the inverse of a lerp and then copies the inverse of the sign of the pitch
+                    //double output_percentage = std::clamp(((units::math::abs(pitch) - min_pitch) / (max_pitch - min_pitch)).value(), -1.0, 1.0) * -wpi::sgn(pitch);
+                    double percentage = std::clamp((units::math::abs(pitch) / maxPitch).value(), 0.0, 0.5);
+
+                    drivetrain.DriveRelative(percentage * powerSign);
+                }
+            }
+        }
+        else {
+            drivetrain.XPattern();
+            drivetrain.ForceStop();
+        }
+    }
     // If we're fully finished with the path, force stop the drive train in order to stop moving
-    if(bForceStop) {
+    else if(bDriveTrainStopped || bForceStop) {
         drivetrain.ForceStop();
+        bDriveTrainStopped = true;
+    }
+
+    const kinematics::KinematicState kinematicState = { arm.GetPosition(), shoulder.GetRotation(), wrist.GetRotation() };
+    if(frc::SmartDashboard::GetBoolean("extensionLimits", true)) {
+        // Check whether or not the current kinematic state is illegal
+        if(!kinematics::Kinematics::IsValid(!intake.IsCubeMode(), kinematicState)) {
+            FRC_ReportError(warn::Warning, "[Auto] Running into arm extension limits... Retracting arm in");
+            arm.ManualControl(0.0);
+            armGoal = arm.GetPosition() - 1_in;
+        }
     }
 
     arm.SetPositionGoal(armGoal);
@@ -133,9 +273,14 @@ void Robot::TeleopInit() {
     arm.ToggleControl(true);
 
     // On teleop init, set the wrist to go to the current wrist angle so that way its not trying to move to a previous setpoint
-    wrist.SetRotationGoal(wrist.GetLastSetpoint());
+    wrist.SetRotationGoal(wrist.GetRotation());
     shoulder.SetRotationGoal(shoulder.GetRotation());
     arm.SetPositionGoal(arm.GetPosition());
+    
+    if(shoulder.GetRotation() > 120_deg) {
+        rotationalFlip = true;
+    }
+    rotationalTimer.Restart();
 }
 
 void Robot::TeleopPeriodic() {
@@ -208,141 +353,191 @@ void Robot::TeleopPeriodic() {
         driveController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, 0.0);
     }
     
-    const double dpadValue = auxController.GetPOV();
-    if(dpadValue != -1) {
-        POVDebouncer.Start();
-        // Use a timer in order to debounce the dpad inputs
-        // This way, when you are unpressing the dpad values, it doesn't override as you unpress one button before another
-        if(POVDebouncer.HasElapsed(0.25_s)) {
-            storedPOVValue = dpadValue;
-            POVDebouncer.Reset();
-            POVDebouncer.Stop();
+    const bool bAutoAlign = false;
+    if(!bAutoAlign) {
+        const double dpadValue = auxController.GetPOV();
+        // If the aux driver is hitting DPAD Up, drive the arm to the high position
+        if(dpadValue == 0) {
+            shoulderGoal = 170_deg;
+            wristGoal = 0_deg;
+            armGoal = 0.74_m;
+        }
+        else if(dpadValue == 180) {
+            shoulderGoal = 24_deg;
+            armGoal = 0.254_m;
+            wristGoal = 24_deg;
+        }
+        else if(dpadValue == 270) {
+            shoulderGoal = 90_deg;
+            wristGoal = 0_deg;
+            armGoal = 0_m;
         }
     }
-    else if((!bInsideCommunity && bWasInCommunity) || auxController.GetStartButton()) {
-        storedPOVValue = -1;
-    }
-
-    frc::SmartDashboard::PutNumber("storedPOVValue", storedPOVValue);
-    frc::SmartDashboard::PutBoolean("aligningToGrid", aligningToGrid);
-    frc::SmartDashboard::PutBoolean("bAligningToScoringLocation", bAligningToScoringLocation);
-    frc::SmartDashboard::PutNumber("alignmentTimer_s", alignmentTimer.Get().value());
-
-    if(bAligningToScoringLocation && alignmentTimer.HasElapsed(3_s)) {
-        bAligningToScoringLocation = false;
-        aligningToGrid = false;
-        alignmentTimer.Reset();
-        alignmentTimer.Stop();
-    }
-
-    if(bInsideCommunity) {
-        if(bAligningToScoringLocation && driveController.GetRawButton(constants::XboxButtons::eButtonLB)) {
-            lighthandler.SetColor(frc::Color::kPeachPuff);
-
-            const frc::Translation2d drivePose = drivetrain.GetPose().Translation();
-            const auto state = kinematics::Kinematics::GetKinematicState(
-                !intake.IsCubeMode(), 
-                targetedScoringLocation,
-                drivePose
-            );
-
-            fmt::print("Rotation State: ({}_deg,{}_m,{}_deg)\n", state.shoulderAngle.value(), state.armExtension.value(), state.wristAngle.value());
-            shoulderGoal = state.shoulderAngle;
-            armGoal = state.armExtension;
-            wristGoal = state.wristAngle;
-
-            // If we're within ~2 deg of the desired rotation, call it good for rotation
-            if(units::math::abs(state.shoulderAngle - shoulder.GetRotation()) >= 2_deg) {
-                alignmentTimer.Reset();
-                alignmentTimer.Stop();
-                bAligningToScoringLocation = false;
-                aligningToGrid = false;
+    else {
+        const double dpadValue = auxController.GetPOV();
+        if(dpadValue != -1) {
+            POVDebouncer.Start();
+            // Use a timer in order to debounce the dpad inputs
+            // This way, when you are unpressing the dpad values, it doesn't override as you unpress one button before another
+            if(POVDebouncer.HasElapsed(0.25_s)) {
+                storedPOVValue = dpadValue;
+                POVDebouncer.Reset();
+                POVDebouncer.Stop();
             }
         }
-        else if((!aligningToGrid && !bAligningToScoringLocation) && driveController.GetRawButtonPressed(constants::XboxButtons::eButtonLB)) {
-            // goalPose is the translation that the robot needs to drive to in order to be in the proper position
-            frc::Translation2d goalPose = frc::Translation2d();
 
-            // Set the goal pose based on the buttons pressed
-            int offset = 0;
-            if(storedPOVValue == 225 || storedPOVValue == 270 || storedPOVValue == 315) {
-                goalPose = fieldConstants.lowLocations[0 + (currentGrid * 3)].location.ToTranslation2d();
-            }
-            else if(storedPOVValue == -1 || (storedPOVValue == 0 || storedPOVValue == 180)) {
-                offset = 1;
-                goalPose = fieldConstants.lowLocations[1 + (currentGrid * 3)].location.ToTranslation2d();
-            }
-            else if(storedPOVValue == 45 || storedPOVValue == 135 || storedPOVValue == 90) {
-                offset = 2;
-                goalPose = fieldConstants.lowLocations[2 + (currentGrid * 3)].location.ToTranslation2d();
-            }
+        frc::SmartDashboard::PutNumber("storedPOVValue", storedPOVValue);
+        frc::SmartDashboard::PutBoolean("aligningToGrid", aligningToGrid);
+        frc::SmartDashboard::PutBoolean("bAligningToScoringLocation", bAligningToScoringLocation);
+        frc::SmartDashboard::PutNumber("alignmentTimer_s", alignmentTimer.Get().value());
 
-            if(storedPOVValue == 0 || storedPOVValue == 45 || storedPOVValue == 315) {
-                targetedScoringLocation = fieldConstants.highLocations[offset + (currentGrid * 3)].location;
-            }
-            else if(storedPOVValue == -1 || storedPOVValue == 270 || storedPOVValue == 90) {
-                targetedScoringLocation = fieldConstants.midLocations[offset + (currentGrid * 3)].location;
-            }
-            else if(storedPOVValue == 180 || storedPOVValue == 135 || storedPOVValue == 225) {
-                targetedScoringLocation = fieldConstants.lowLocations[offset + (currentGrid * 3)].location;
-            }
-
-            const units::inch_t alignmentOffset = 16.5_in;
-
-            // Add/subtract an extra half robot width in order to account for robot size.
-            // If we're on the red alliance, we actually want to subtract this difference due to the lack of field symmetry.
-            goalPose = goalPose + frc::Translation2d(
-                alignmentOffset * (frc::DriverStation::GetAlliance() == frc::DriverStation::Alliance::kBlue ? 1 : -1), 
-                7.25_in
-            );
-            
-            // Set the drive train to actually start moving to the goal pose
-            // TODO: Potentially automatically rotate the robot to face properly
-            // It might be best to keep the robot facing the same way it currently is to avoid hitting unknown objects (or the field)
-            drivetrain.SetTrajectory(frc::Pose2d(goalPose, drivetrain.GetPose().Rotation()));
-            
-            aligningToGrid = true;
+        if(bAligningToScoringLocation && alignmentTimer.HasElapsed(3_s)) {
+            bAligningToScoringLocation = false;
+            aligningToGrid = false;
+            alignmentTimer.Reset();
+            alignmentTimer.Stop();
         }
-        else if(aligningToGrid) {
-            const drive::AutonomousState state = drivetrain.FollowTrajectory();
-            if(state.bCompletedPath) {
-                // Flash the lights white whenever we've auto lined up to the scoring position.
-                lighthandler.SetColor(frc::Color::kWhite);
+
+        if(bInsideCommunity) {
+            if(bAligningToScoringLocation && driveController.GetRawButton(constants::XboxButtons::eButtonLB)) {
+                lighthandler.SetColor(frc::Color::kPeachPuff);
+
+                const frc::Translation2d drivePose = drivetrain.GetPose().Translation();
+                const auto state = kinematics::Kinematics::GetKinematicState(
+                    !intake.IsCubeMode(), 
+                    targetedScoringLocation,
+                    drivePose
+                );
+
+                fmt::print("Rotation State: ({}_deg,{}_m,{}_deg)\n", state.shoulderAngle.value(), state.armExtension.value(), state.wristAngle.value());
+                shoulderGoal = state.shoulderAngle;
+                armGoal = state.armExtension;
+                wristGoal = state.wristAngle;
+
+                // If we're within ~2 deg of the desired rotation, call it good for rotation
+                if(units::math::abs(state.shoulderAngle - shoulder.GetRotation()) >= 2_deg) {
+                    alignmentTimer.Reset();
+                    alignmentTimer.Stop();
+                    bAligningToScoringLocation = false;
+                    aligningToGrid = false;
+                }
+            }
+            else if((!aligningToGrid && !bAligningToScoringLocation) && driveController.GetRawButtonPressed(constants::XboxButtons::eButtonLB)) {
+                // goalPose is the translation that the robot needs to drive to in order to be in the proper position
+                frc::Translation2d goalPose = frc::Translation2d();
+
+                // Set the goal pose based on the buttons pressed
+                int offset = 0;
+                if(storedPOVValue == 225 || storedPOVValue == 270 || storedPOVValue == 315) {
+                    goalPose = fieldConstants.lowLocations[0 + (currentGrid * 3)].location.ToTranslation2d();
+                }
+                else if(storedPOVValue == -1 || (storedPOVValue == 0 || storedPOVValue == 180)) {
+                    offset = 1;
+                    goalPose = fieldConstants.lowLocations[1 + (currentGrid * 3)].location.ToTranslation2d();
+                }
+                else if(storedPOVValue == 45 || storedPOVValue == 135 || storedPOVValue == 90) {
+                    offset = 2;
+                    goalPose = fieldConstants.lowLocations[2 + (currentGrid * 3)].location.ToTranslation2d();
+                }
+
+                if(storedPOVValue == 0 || storedPOVValue == 45 || storedPOVValue == 315) {
+                    targetedScoringLocation = fieldConstants.highLocations[offset + (currentGrid * 3)].location;
+                }
+                else if(storedPOVValue == -1 || storedPOVValue == 270 || storedPOVValue == 90) {
+                    targetedScoringLocation = fieldConstants.midLocations[offset + (currentGrid * 3)].location;
+                }
+                else if(storedPOVValue == 180 || storedPOVValue == 135 || storedPOVValue == 225) {
+                    targetedScoringLocation = fieldConstants.lowLocations[offset + (currentGrid * 3)].location;
+                }
+
+                const units::inch_t alignmentOffset = 16.5_in;
+
+                // Add/subtract an extra half robot width in order to account for robot size.
+                // If we're on the red alliance, we actually want to subtract this difference due to the lack of field symmetry.
+                goalPose = goalPose + frc::Translation2d(
+                    alignmentOffset * (frc::DriverStation::GetAlliance() == frc::DriverStation::Alliance::kBlue ? 1 : -1), 
+                    7.25_in
+                );
                 
-                drivetrain.ForceStop();
+                // Set the drive train to actually start moving to the goal pose
+                // TODO: Potentially automatically rotate the robot to face properly
+                // It might be best to keep the robot facing the same way it currently is to avoid hitting unknown objects (or the field)
+                drivetrain.SetTrajectory(frc::Pose2d(goalPose, drivetrain.GetPose().Rotation()));
+                
+                aligningToGrid = true;
+            }
+            else if(aligningToGrid) {
+                const drive::AutonomousState state = drivetrain.FollowTrajectory();
+                if(state.bCompletedPath) {
+                    // Flash the lights white whenever we've auto lined up to the scoring position.
+                    lighthandler.SetColor(frc::Color::kWhite);
+                    
+                    drivetrain.ForceStop();
 
-                bAligningToScoringLocation = true;
+                    bAligningToScoringLocation = true;
+                    alignmentTimer.Restart();
+                }
+                else if(!drivetrain.GetTrajectoryActive()) {
+                    fmt::print("Trajectory cancelled... Flipping colors\n");
+                    // If the trajectory got cancelled, flip the colors to red
+                    lighthandler.SetColor(frc::Color::kRed);
+                    
+                    aligningToGrid = false;
+                    bAligningToScoringLocation = false;
+                    alignmentTimer.Reset();
+                    alignmentTimer.Stop();
+                }
+            }
+            else {
                 alignmentTimer.Restart();
             }
-            else if(!drivetrain.GetTrajectoryActive()) {
-                fmt::print("Trajectory cancelled... Flipping colors\n");
-                // If the trajectory got cancelled, flip the colors to red
-                lighthandler.SetColor(frc::Color::kRed);
-                
-                aligningToGrid = false;
-                bAligningToScoringLocation = false;
-                alignmentTimer.Reset();
-                alignmentTimer.Stop();
-            }
         }
-        else {
-            alignmentTimer.Restart();
+    }
+    frc::SmartDashboard::PutNumber("rotationalTimer_s", rotationalTimer.Get().value());
+    frc::SmartDashboard::PutBoolean("rotationalFlip", rotationalFlip);
+
+    // If the aux driver hasn't touched the controls for 0.5s, flip the controls based on the arm position
+    // This way if the arm is 180deg around, the up joystick will still drive the arm/wrist "up".
+    const units::second_t rotationalDelay = 0.125_s;
+    double rotationalOverride = rotationalFlip ? 1 : -1;
+    if(shoulder.GetRotation() > 120_deg) {
+        if(rotationalTimer.HasElapsed(rotationalDelay)) {
+            rotationalOverride = 1;
+            rotationalFlip = true;
+        }
+    }
+    else if(shoulder.GetRotation() < 120_deg) {
+        if(rotationalTimer.HasElapsed(rotationalDelay)) {
+            rotationalOverride = -1;
+            rotationalFlip = false;
         }
     }
 
     // Use the joysticks to manually control the arm
     double shoulderOverride = frc::ApplyDeadband(auxController.GetLeftY(), 0.10);
     if(shoulderOverride != 0) {
-        shoulder.ManualControl(shoulderOverride * -0.50);
+        shoulder.ManualControl(shoulderOverride * (0.50 * rotationalOverride));
         shoulder.AdjustFeedforward(0_V);
+        rotationalTimer.Restart();
     }
     else {
         shoulder.ManualControl(0.0);
     }
 
     double wristOverride = frc::ApplyDeadband(auxController.GetRightY(), 0.10);
+
+    if(wrist.GetRotation() >= 85_deg) {
+        if(!rotationalFlip && wristOverride < 0) {
+            wristOverride = 0;
+        }
+        else if(rotationalFlip && wristOverride > 0) {
+            wristOverride = 0;
+        }
+        
+    }
+
     if(wristOverride != 0) {
-        wrist.ManualControl(wristOverride * -0.35);
+        wrist.ManualControl(wristOverride * (0.35 * rotationalOverride));
     }
     else {
         wrist.ManualControl(0.0);
@@ -354,7 +549,8 @@ void Robot::TeleopPeriodic() {
     else {
         arm.ManualControl(0.0);
     }
-    
+    frc::SmartDashboard::PutNumber("wristOverride", wristOverride);
+    frc::SmartDashboard::PutNumber("shoulderOverride", shoulderOverride);
     // TODO: Implement extension limits
     frc::SmartDashboard::PutBoolean("cubeMode", intake.IsCubeMode());
     const kinematics::KinematicState kinematicState = { arm.GetPosition(), shoulder.GetRotation(), wrist.GetRotation() };
@@ -362,8 +558,7 @@ void Robot::TeleopPeriodic() {
         // Check whether or not the current kinematic state is illegal
         if(!kinematics::Kinematics::IsValid(!intake.IsCubeMode(), kinematicState)) {
             FRC_ReportError(warn::Warning, "[Robot] Running into arm extension limits... Retracting arm in");
-            arm.ManualControl(0.0);
-            armGoal = arm.GetPosition() - 1_in;
+            armGoal = arm.GetPosition() - 3.5_in;
             auxController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, 1.0);
         }
         else {
@@ -380,8 +575,8 @@ void Robot::TeleopPeriodic() {
 
     if(auxController.GetXButton()) {
         armGoal = 0_m;
-        shoulderGoal = -40_deg;
-        wristGoal = 25_deg;
+        shoulderGoal = -33_deg;
+        wristGoal = 24_deg;
     }
     if(auxController.GetYButton()) {
         armGoal = 0_m;

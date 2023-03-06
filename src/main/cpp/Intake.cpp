@@ -2,12 +2,15 @@
 
 intake::Intake::Intake() {
     intakeMotor.SetSmartCurrentLimit(25);
-    intakeMotor.SetInverted(true);
+    intakeMotor.SetInverted(false);
+    intakeSolenoid1.Set(false);
+    intakeSolenoid2.Set(false);
+    cubeMode = false;
 }
 
 void intake::Intake::ConeMode(){
     intakeSolenoid1.Set(false);
-    intakeSolenoid2.Set(true);
+    intakeSolenoid2.Set(false);
     Inhale();
 
     cubeMode = false;
@@ -15,7 +18,7 @@ void intake::Intake::ConeMode(){
 
 void intake::Intake::CubeMode() { 
     intakeSolenoid1.Set(true);
-    intakeSolenoid2.Set(false);
+    intakeSolenoid2.Set(true);
     Inhale();
 
     cubeMode = true;
@@ -23,7 +26,7 @@ void intake::Intake::CubeMode() {
 
 void intake::Intake::Inhale() {
     // Run the main intake motor at 90% in order to start intaking things
-    intakeMotor.Set(0.90);
+    intakeMotor.Set(-1.00);
 }
 
 void intake::Intake::Hold() {
@@ -32,11 +35,15 @@ void intake::Intake::Hold() {
 }
 
 void intake::Intake::Spit() {
-    intakeMotor.Set(-0.5);
+    intakeMotor.Set(0.5);
+}
+
+void intake::Intake::SmallSpit() {
+    intakeMotor.Set(0.15);
 }
 
 void intake::Intake::Shoot() {
-    intakeMotor.Set(-1.0);
+    intakeMotor.Set(1.0);
 }
 
 void intake::Intake::Stop() {

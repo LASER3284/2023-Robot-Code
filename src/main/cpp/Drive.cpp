@@ -48,6 +48,10 @@ void drive::Drive::Tick() {
     double yAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eLeftAxisY), 0.10);
     double rAxis = frc::ApplyDeadband(-controller->GetRawAxis(constants::XboxAxis::eRightAxisX), 0.10);
 
+    if(pathCommand != nullptr && pathCommand->IsFinished()) {
+        bFollowTrajectory = false;
+    }
+
     if((xAxis != 0 || yAxis != 0 || rAxis != 0 || !controller->GetRawButton(constants::XboxButtons::eButtonLB)) && pathCommand != nullptr) {
         bFollowTrajectory = false;
     }
@@ -216,6 +220,8 @@ void drive::Drive::LogEncoders() {
     frc::SmartDashboard::PutNumber("bl_drive", backleft.GetPosition().distance.value());
     frc::SmartDashboard::PutNumber("br_turn", backright.getTurnEncPos());
     frc::SmartDashboard::PutNumber("br_drive", backright.GetPosition().distance.value());
+
+    frc::SmartDashboard::PutNumber("gyro_pitch", (double)gyro.GetPitch());
 }
 
 void drive::Drive::ResetOdometry() {
@@ -227,6 +233,30 @@ void drive::Drive::ResetOdometry() {
     gyro.ZeroYaw();
 }
 
+void drive::Drive::DriveRelative(double power, units::meters_per_second_t maxVelocity) {
+    frc::ChassisSpeeds nonrelspeeds = frc::ChassisSpeeds();
+    nonrelspeeds.omega = 0_deg_per_s;
+    nonrelspeeds.vx = maxVelocity * power;
+    nonrelspeeds.vy = 0_mps;
+
+    wpi::array<frc::SwerveModuleState, 4> states = kinematics.ToSwerveModuleStates(nonrelspeeds);
+
+    kinematics.DesaturateWheelSpeeds(
+        &states, 
+        nonrelspeeds, 
+        SwerveModule::kMaxSpeed, 
+        maxVelocity, 
+        0_deg_per_s
+    );
+
+    auto [fl, fr, bl, br] = states;
+
+    this->frontleft.SetDesiredState(fl, true);
+    this->frontright.SetDesiredState(fr, true);
+    this->backleft.SetDesiredState(bl, true);
+    this->backright.SetDesiredState(br, true);
+}
+
 const drive::AutonomousState drive::Drive::FollowTrajectory() {
     if(pathCommand == nullptr) {
         FRC_ReportError(frc::err::Error, "[Robot] Unable to follow trajectory; No valid path command generated");
@@ -236,13 +266,9 @@ const drive::AutonomousState drive::Drive::FollowTrajectory() {
     if(bFollowTrajectory && !pathCommand->IsFinished()) {
         pathCommand->Execute();
     }
-
-    if(pathCommand->IsFinished()) {
-        bFollowTrajectory = false;
-    }
     
     return { 
-        pathCommand->IsFinished() && bFollowTrajectory,
+        pathCommand->IsFinished(),
         currentStopPoint,
         (pathCommand->IsFinished() && currentStopPoint + 1 >= subpaths.size())
     };
@@ -296,7 +322,7 @@ void drive::Drive::SetTrajectory(frc::Pose2d pose) {
 void drive::Drive::SetTrajectory(const std::string& pathName, bool resetPose) {
     bFollowTrajectory = true;
 
-    subpaths = PathPlanner::loadPathGroup(pathName, { { 1.0_mps, 1.5_mps_sq } });
+    subpaths = PathPlanner::loadPathGroup(pathName, { { 0.25_mps, 0.125_mps_sq } });
     currentStopPoint = -1;
     
     StartNextTrajectory();
@@ -341,6 +367,22 @@ void drive::Drive::ForceStop() {
         frc::SwerveModuleState { 0_mps, frontright.GetPosition().angle },
         frc::SwerveModuleState { 0_mps, backleft.GetPosition().angle },
         frc::SwerveModuleState { 0_mps, backright.GetPosition().angle },
+    };
+
+    auto [fl, fr, bl, br] = states;
+
+    frontleft.SetDesiredState(fl, false);
+    frontright.SetDesiredState(fr, false);
+    backleft.SetDesiredState(bl, false);
+    backright.SetDesiredState(br, false);
+}
+
+void drive::Drive::XPattern() {
+    wpi::array<frc::SwerveModuleState, 4> states = wpi::array<frc::SwerveModuleState, 4> {
+        frc::SwerveModuleState { 0_mps, frc::Rotation2d(45_deg) },
+        frc::SwerveModuleState { 0_mps, frc::Rotation2d(315_deg) },
+        frc::SwerveModuleState { 0_mps, frc::Rotation2d(135_deg) },
+        frc::SwerveModuleState { 0_mps, frc::Rotation2d(225_deg) },
     };
 
     auto [fl, fr, bl, br] = states;

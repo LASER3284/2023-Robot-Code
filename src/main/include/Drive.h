@@ -70,13 +70,16 @@ namespace drive {
             void ResetOdometry();
             void UpdateOdometry();
             frc::Pose2d GetPose();
+            units::degree_t GetPitch() { return units::degree_t(gyro.GetPitch()); }
 
+            void DriveRelative(double power, units::meters_per_second_t maxVelocity = Constants::maxTranslationalVelocity / 2);
             void SetTrajectory(const frc::Pose2d pose);
             void SetTrajectory(const std::string& pathName, bool resetPose = false);
             void StartNextTrajectory();
             const AutonomousState FollowTrajectory();
 
             void ForceStop();
+            void XPattern();
 
             void ForceVisionPose() {
                 poseEstimator.ResetPosition(

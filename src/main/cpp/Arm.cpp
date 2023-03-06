@@ -5,6 +5,8 @@ arm::Arm::Arm() {
     extensionMotor.SetSmartCurrentLimit(25);
     extensionMotor.SetInverted(true);
     extensionEncoder.SetPosition(0);
+    controlTimer.Restart();
+    positionController.Reset();
 }
 
 units::meter_t arm::Arm::GetPosition() {
@@ -12,7 +14,7 @@ units::meter_t arm::Arm::GetPosition() {
 }
 
 void arm::Arm::SetPositionGoal(units::meter_t distance) {
-    // positionController.SetGoal(distance);
+    positionController.SetSetpoint(distance.value());
     extensionGoal = { distance, 0_mps };
 }
 
@@ -29,9 +31,10 @@ void arm::Arm::Tick() {
         if(manualPercentage != 0.0) {
             extensionMotor.Set(manualPercentage);
             controlTimer.Restart();
+            lastGoal = GetPosition();
         }
         else {
-            if(extensionGoal.position != extensionSetpoint.position && controlTimer.HasElapsed(0.150_s)) {
+            if(extensionGoal.position != GetPosition() && controlTimer.HasElapsed(0.250_s)) {
                 // Create a motion profile with the given maximum velocity and maximum 
                 // acceleration constraints for the next setpoint, the desired goal, and the
                 // current setpoint.
@@ -42,18 +45,21 @@ void arm::Arm::Tick() {
                 };
 
                 extensionSetpoint = extensionProfile.Calculate(20_ms);
+                lastGoal = extensionSetpoint.position;
             }
             else {
-                extensionSetpoint = { GetPosition(), 0_mps };
+                positionController.Reset();
+                extensionSetpoint = { lastGoal, 0_mps };
             }
 
             extensionMotor.SetVoltage(
-                //units::volt_t(positionController.Calculate(GetPosition()))
+                units::volt_t(positionController.Calculate(GetPosition().value(), extensionGoal.position.value())) +
                 feedforward.Calculate(extensionSetpoint.velocity)
             );
         }
     }
     else {
+        positionController.Reset();
         extensionMotor.SetVoltage(0_V);
         controlTimer.Restart();
     }

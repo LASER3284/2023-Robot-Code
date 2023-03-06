@@ -23,10 +23,11 @@ namespace wrist {
             static constexpr double kWristGearRatio = 90.0 * (36.0 / 24.0);
 
             /// @brief The starting angle for the wrist
-            static constexpr units::degree_t kStartingAngle = -85_deg;
+            static constexpr units::degree_t kStartingAngle = 90_deg;
 
-            static constexpr units::volt_t kG = 0.50656_V;
-            static constexpr auto kV = 1.2074_V / 1_rad_per_s;
+            static constexpr units::volt_t kS = 0.35143_V;
+            static constexpr units::volt_t kG = 0.46275_V;
+            static constexpr auto kV = 1.235_V / 1_rad_per_s;
 
             static constexpr units::degree_t kMaxAngle = 185_deg;
     };
@@ -55,14 +56,18 @@ namespace wrist {
 
             /// @brief Manually control the rotation of the wrist
             void ManualControl(double percentage) { manualPercentage = percentage; }
+
+            void RefreshController() { 
+                wristSetpoint = { GetRotation(), 0_rad_per_s };
+            }
         private:
             rev::CANSparkMax wristMotor { Constants::kWristMotorID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
             rev::SparkMaxRelativeEncoder wristEncoder = wristMotor.GetEncoder();
 
             frc2::PIDController controller {
-                0.0,    // kP
+                5.0334,    // kP
                 0.0,    // kI
-                0.0,    // kD
+                0.87225    // kD
             };
 
             double manualPercentage = 0.0;
@@ -70,12 +75,12 @@ namespace wrist {
             /// @brief The trapezoidal profile constraints for the shoulder rotation
             /// This specifies the max rotational velocity *and* the max rotational acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 120_deg_per_s, 360_deg_per_s_sq };
+            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 0_deg_per_s, 0_deg_per_s_sq };
 
-            /// @brief The current goal to rotate the shoulder to
+            /// @brief The current goal to rotate the wrist to
             frc::TrapezoidProfile<units::radians>::State wristGoal;
 
-            /// @brief The current setpoint for the shoulder rotation
+            /// @brief The current setpoint for the wrist rotation
             frc::TrapezoidProfile<units::radians>::State wristSetpoint;
 
             /// @brief A timer used for overriding the manual percentage vs the feedforward calculations

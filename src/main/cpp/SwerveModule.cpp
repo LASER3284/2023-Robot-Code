@@ -21,6 +21,8 @@ drive::SwerveModule::SwerveModule(int drivemotor_in, int turnmotor_in, int encod
 
     turnmotor->SetSmartCurrentLimit(60);
     
+    drivemotor->ConfigIntegratedSensorInitializationStrategy(ctre::phoenix::sensors::SensorInitializationStrategy::BootToZero);
+
     encoder->ConfigAbsoluteSensorRange(ctre::phoenix::sensors::AbsoluteSensorRange::Signed_PlusMinus180);
     encoder->ConfigSensorInitializationStrategy(ctre::phoenix::sensors::SensorInitializationStrategy::BootToAbsolutePosition);
 
