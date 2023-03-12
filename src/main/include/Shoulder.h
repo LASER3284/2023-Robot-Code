@@ -107,7 +107,7 @@ namespace shoulder {
             /// @brief The trapezoidal profile constraints for the shoulder rotation
             /// This specifies the max rotational velocity *and* the max rotational acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 1_deg_per_s, 60_deg_per_s_sq };
+            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 120_deg_per_s, 60_deg_per_s_sq };
 
             /// @brief The current goal to rotate the shoulder to
             frc::TrapezoidProfile<units::radians>::State shoulderGoal;

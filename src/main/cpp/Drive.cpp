@@ -18,6 +18,9 @@ drive::Drive::Drive(frc::Joystick* controller_in) {
     frc::SmartDashboard::GetBoolean("bProtectHeading", true);
 
     frc::SmartDashboard::PutData("field", &field);
+
+    photonPoseEstimator.SetMultiTagFallbackStrategy(photonlib::PoseStrategy::CLOSEST_TO_REFERENCE_POSE);
+    poseEstimator.SetVisionMeasurementStdDevs({4.23, 4.23, constants::Pi * 2});
 }
 
 void drive::Drive::SetJoystick(bool state) {
@@ -172,7 +175,7 @@ void drive::Drive::Tick() {
         xVelocity,
         yVelocity,
         rotation,
-        gyro.GetRotation2d()
+        poseEstimator.GetEstimatedPosition().Rotation()
     );
 
     wpi::array<frc::SwerveModuleState, 4> states = kinematics.ToSwerveModuleStates(fieldRelative ? relspeeds : nonrelspeeds);
@@ -289,10 +292,10 @@ void drive::Drive::StartNextTrajectory() {
             [this](auto states) {
                 auto [fl, fr, bl, br] = states;
 
-                this->frontleft.SetDesiredState(fl);
-                this->frontright.SetDesiredState(fr);
-                this->backleft.SetDesiredState(bl);
-                this->backright.SetDesiredState(br);
+                this->frontleft.SetDesiredState(fl, true);
+                this->frontright.SetDesiredState(fr, true);
+                this->backleft.SetDesiredState(bl, true);
+                this->backright.SetDesiredState(br, true);
             }
         );
 
@@ -322,7 +325,7 @@ void drive::Drive::SetTrajectory(frc::Pose2d pose) {
 void drive::Drive::SetTrajectory(const std::string& pathName, bool resetPose) {
     bFollowTrajectory = true;
 
-    subpaths = PathPlanner::loadPathGroup(pathName, { { 0.25_mps, 0.125_mps_sq } });
+    subpaths = PathPlanner::loadPathGroup(pathName, { { 2.46888_mps, 0.35_mps_sq } });
     currentStopPoint = -1;
     
     StartNextTrajectory();
@@ -333,6 +336,14 @@ void drive::Drive::SetTrajectory(const std::string& pathName, bool resetPose) {
             { frontleft.GetPosition(), frontright.GetPosition(), backleft.GetPosition(), backright.GetPosition() },
             subpaths[currentStopPoint].getInitialHolonomicPose()
         );
+    }
+}
+
+void drive::Drive::UpdateFieldTrajectory(const std::string& pathName) {
+    const std::string file_path = (frc::filesystem::GetDeployDirectory() + "/pathplanner/" + pathName + ".path");
+    if(std::filesystem::exists(file_path)) {
+        const auto path = PathPlanner::loadPath(pathName, { 1.23444_mps, 0.25_mps_sq } );
+        field.GetObject("trajectory")->SetTrajectory(path.asWPILibTrajectory());
     }
 }
 
@@ -347,18 +358,45 @@ void drive::Drive::UpdateOdometry() {
     );
 
     photonPoseEstimator.SetReferencePose(frc::Pose3d(poseEstimator.GetEstimatedPosition()));
-    units::millisecond_t currentTime = frc::Timer::GetFPGATimestamp();
     auto result = photonPoseEstimator.Update();
 
-    // If we have a latency delay of 0ms, then we definitely didn't actually get some sort of result for AprilTag parsing.
-    if(result.second > 0_ms) {
-        units::millisecond_t timestamp = (currentTime - result.second);
-        poseEstimator.AddVisionMeasurement(result.first.ToPose2d(), timestamp);
+    if(result) {
+        const auto estimate = result.value();
+        
+        double averageAmbiguity = 0;
+        int count = 0;
+        for(const auto &target : estimate.targetsUsed) {
+            averageAmbiguity += target.GetPoseAmbiguity();
+            count += 1;
+        }
+        averageAmbiguity = averageAmbiguity / count;
+        
+        // Ignore very ambiguous pose estimations in order to avoid jitter at long distances.
+        if(averageAmbiguity <= 0.14) {
+            poseEstimator.AddVisionMeasurement(result.value().estimatedPose.ToPose2d(), result.value().timestamp);
+        }
+
+        pastRobotPose = result.value().estimatedPose;
     }
 
     field.SetRobotPose(poseEstimator.GetEstimatedPosition());
 
-    pastRobotPose = result.first;
+}
+
+void drive::Drive::ForceForward() {
+    wpi::array<frc::SwerveModuleState, 4> states = wpi::array<frc::SwerveModuleState, 4> {
+        frc::SwerveModuleState { 0_mps, 0_deg },
+        frc::SwerveModuleState { 0_mps, 0_deg },
+        frc::SwerveModuleState { 0_mps, 0_deg },
+        frc::SwerveModuleState { 0_mps, 0_deg },
+    };
+
+    auto [fl, fr, bl, br] = states;
+
+    frontleft.SetDesiredState(fl, true);
+    frontright.SetDesiredState(fr, true);
+    backleft.SetDesiredState(bl, true);
+    backright.SetDesiredState(br, true);
 }
 
 void drive::Drive::ForceStop() {
@@ -371,10 +409,10 @@ void drive::Drive::ForceStop() {
 
     auto [fl, fr, bl, br] = states;
 
-    frontleft.SetDesiredState(fl, false);
-    frontright.SetDesiredState(fr, false);
-    backleft.SetDesiredState(bl, false);
-    backright.SetDesiredState(br, false);
+    frontleft.SetDesiredState(fl, true);
+    frontright.SetDesiredState(fr, true);
+    backleft.SetDesiredState(bl, true);
+    backright.SetDesiredState(br, true);
 }
 
 void drive::Drive::XPattern() {
@@ -387,8 +425,8 @@ void drive::Drive::XPattern() {
 
     auto [fl, fr, bl, br] = states;
 
-    frontleft.SetDesiredState(fl, false);
-    frontright.SetDesiredState(fr, false);
-    backleft.SetDesiredState(bl, false);
-    backright.SetDesiredState(br, false);
+    frontleft.SetDesiredState(fl, true);
+    frontright.SetDesiredState(fr, true);
+    backleft.SetDesiredState(bl, true);
+    backright.SetDesiredState(br, true);
 }

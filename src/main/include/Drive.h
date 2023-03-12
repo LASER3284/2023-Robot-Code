@@ -15,13 +15,14 @@
 #include <frc/controller/PIDController.h>
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/apriltag/AprilTagFieldLayout.h>
+#include <frc/apriltag/AprilTagFields.h>
 #include <frc/controller/ProfiledPIDController.h>
 #include <frc/Errors.h>
-
+#include <filesystem>
 #include <pathplanner/lib/PathPlanner.h>
 #include <pathplanner/lib/commands/PPSwerveControllerCommand.h>
 #include <photonlib/PhotonCamera.h>
-#include <photonlib/RobotPoseEstimator.h>
+#include <photonlib/PhotonPoseEstimator.h>
 #include <frc/smartdashboard/Field2d.h>
 #include <AHRS.h>
 
@@ -48,7 +49,7 @@ namespace drive {
             static constexpr double kTrajectoryY_I = 0.0;
             static constexpr double kTrajectoryY_D = 0.0;
 
-            static constexpr double kTrajectoryTheta_P = 4.75;
+            static constexpr double kTrajectoryTheta_P = 2.5;
             static constexpr double kTrajectoryTheta_I = 0.0;
             static constexpr double kTrajectoryTheta_D = 0.0;
     };
@@ -75,9 +76,11 @@ namespace drive {
             void DriveRelative(double power, units::meters_per_second_t maxVelocity = Constants::maxTranslationalVelocity / 2);
             void SetTrajectory(const frc::Pose2d pose);
             void SetTrajectory(const std::string& pathName, bool resetPose = false);
+            void UpdateFieldTrajectory(const std::string& pathName);
             void StartNextTrajectory();
             const AutonomousState FollowTrajectory();
 
+            void ForceForward();
             void ForceStop();
             void XPattern();
 
@@ -131,25 +134,17 @@ namespace drive {
             frc::SwerveDriveKinematics<4> kinematics {
                 frontLeftLocation, frontRightLocation, backLeftLocation, backRightLocation
             };
-
-            /// @brief A shared ptr managing the AprilTag field layout
-            std::shared_ptr<frc::AprilTagFieldLayout> tagLayout = std::make_shared<frc::AprilTagFieldLayout>(
-                (frc::filesystem::GetDeployDirectory() + "/TagLayout.json")
-            );
-
-            /// @brief A list of mappings between photonlib::PhotonCamera and Transform3d
-            std::vector<std::pair<std::shared_ptr<photonlib::PhotonCamera>, frc::Transform3d>> cameras {
-                { 
-                    std::make_shared<photonlib::PhotonCamera>("mainCam"), 
-                    frc::Transform3d(
-                        frc::Translation3d(-4.5_in, 2_in, 22.625_in),
-                        frc::Rotation3d(10_deg, 0_deg, 0_deg)
-                    ) 
-                }
-            };
             
-            /// @brief A RobotPoseEstimator grabs the ""best"" pose to be used for the given AprilTags in view
-            photonlib::RobotPoseEstimator photonPoseEstimator { tagLayout, photonlib::PoseStrategy::LOWEST_AMBIGUITY, cameras };
+            /// @brief A PhotonPoseEstimator grabs the ""best"" pose to be used for the given AprilTags in view
+            photonlib::PhotonPoseEstimator photonPoseEstimator {
+                frc::LoadAprilTagLayoutField(frc::AprilTagField::k2023ChargedUp),
+                photonlib::MULTI_TAG_PNP,
+                std::move(photonlib::PhotonCamera("mainCam")),
+                frc::Transform3d(
+                    frc::Translation3d(4.5_in, -2_in, 22.625_in),
+                    frc::Rotation3d(0_deg, 5_deg, 180_deg)
+                )
+            };
             frc::Pose3d pastRobotPose = frc::Pose3d();
 
             frc::SwerveDrivePoseEstimator<4> poseEstimator = frc::SwerveDrivePoseEstimator(

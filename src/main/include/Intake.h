@@ -68,6 +68,6 @@ namespace intake {
             frc::Solenoid intakeSolenoid2 { frc::PneumaticsModuleType::REVPH, Constants::kIntakeSolenoidID2 };
 
             /// @brief A median filter used to measure the current of the NEO 550 to detect current spikes for object detection
-            frc::MedianFilter<units::ampere_t> medianFilter = frc::MedianFilter<units::ampere_t>(4);
+            frc::MedianFilter<units::ampere_t> medianFilter = frc::MedianFilter<units::ampere_t>(8);
     };
 }

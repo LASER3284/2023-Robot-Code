@@ -20,7 +20,6 @@ void wrist::Wrist::Tick(units::degree_t shoulderRotation) {
         wristMotor.SetVoltage((manualPercentage * 12_V));
         wristTimer.Restart();
         wristGoal = { GetRotation(), 0_deg_per_s };
-        
     }
     else {
         // Since the movements on the end of the wrist are amplified by the shoulder, we really don't care too much about

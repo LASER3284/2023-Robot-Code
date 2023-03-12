@@ -71,27 +71,24 @@ class Robot : public frc::TimedRobot {
 
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::map<std::string, std::string> mTrajectoryMap {
-            { "Test Path", "Test Path" },
-
-            { "Mid Idle", "MidIdle"},
+            { "Mid Balance", "MidBalance"},
+            { "Far Mid Cone Balance", "FarMidConeBalance"},
 
             { "Mobile", "Mobile"},
-            { "Far Mobile", "FarMobile" },
+            { "Mobile Mid-Cone", "MobileCone"},
+            
+            { "Far Mobile", "FarMobile"},
+            { "Far Mobile Mid-Cone", "FarMobileCone"},
 
-            { "Mid Balance", "MidBalance"},
+            { "Far Mobile Mid-Cone Balance", "FarMobileConeBalance"},
 
-            { "Mobile Cone", "MobileCone"},
-            { "Far Mobile Cone", "FarMobileCone"},
-
-            { "Far Cone Balance", "FarConeBalance"},
-
-            { "Cone Cube - Balance", "ConeCubeBalance" },
-            { "Cone Cube", "ConeCubeNoBalance" },
-
-            { "Far Cone Cube - Balance", "FarConeCubeBalance"},
-            { "Far Cone Cube", "FarConeCube"},
+            { "Far Mid Cone Cone", "FarConeCone"},
+            { "Far Mid Cone Cube", "FarConeCube"},
+            { "Far Mid-Cone Cube Balance", "FarMobileConeCubeBalance"},
 
             // { "Far Triple Score", "FarTripleScore"}
+
+            { "Test Path", "TestPath"}
         };
 
         /// @brief Whether or not the robot has processed the starting action within auto
@@ -120,6 +117,11 @@ class Robot : public frc::TimedRobot {
 
         /// @brief Whether or not the robot was inside as of the last tick
         bool bWasInCommunity = false;
+
+        /// @brief Whether or not the robot is currently inside the community as of right now
+        bool bInsideCommunity = false;
+
+        int currentGrid = -1;
 
         /// @brief A timer object used for timing the rumble of the main driving controller
         frc::Timer rumbleTimer;

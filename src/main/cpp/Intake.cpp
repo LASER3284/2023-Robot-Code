@@ -25,13 +25,13 @@ void intake::Intake::CubeMode() {
 }
 
 void intake::Intake::Inhale() {
-    // Run the main intake motor at 90% in order to start intaking things
+    // Run the main intake motor at 100% in order to start intaking things
     intakeMotor.Set(-1.00);
 }
 
 void intake::Intake::Hold() {
     // Apply a small amount of voltage in order to keep the item in the claw
-    intakeMotor.Set(0.0);
+    intakeMotor.Set(-1.00);
 }
 
 void intake::Intake::Spit() {
@@ -51,6 +51,6 @@ void intake::Intake::Stop() {
 }
 
 bool intake::Intake::HasElement() {
-    return GetFilteredCurrent() >= 20.5_A;
+    return GetFilteredCurrent() >= 25_A;
 }
 
