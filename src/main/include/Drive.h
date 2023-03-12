@@ -34,6 +34,8 @@
 #include <algorithm>
 #include <vector>
 #include <map>
+#include <vector>
+#include <tuple>
 
 namespace drive {
     class Constants {
@@ -61,6 +63,21 @@ namespace drive {
         bool bCompletedPath = false;
     };
 
+    struct AutonomousPath {
+        /// @brief The "human-friendly" name of the path, used for displaying in the chooser
+        std::string humanName;
+
+        std::string pathName;
+
+        std::vector<units::meters_per_second_t> velocityOverrides = {
+            2.46888_mps
+        };
+
+        std::vector<units::meters_per_second_squared_t> accelerationOverrides = {
+            0.35_mps_sq
+        };
+    };
+
     class Drive {
         public:
             Drive(frc::Joystick* controller_in);
@@ -75,7 +92,7 @@ namespace drive {
 
             void DriveRelative(double power, units::meters_per_second_t maxVelocity = Constants::maxTranslationalVelocity / 2);
             void SetTrajectory(const frc::Pose2d pose);
-            void SetTrajectory(const std::string& pathName, bool resetPose = false);
+            void SetTrajectory(const drive::AutonomousPath path, bool resetPose = false);
             void UpdateFieldTrajectory(const std::string& pathName);
             void StartNextTrajectory();
             const AutonomousState FollowTrajectory();

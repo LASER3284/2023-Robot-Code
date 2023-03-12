@@ -23,6 +23,7 @@
 #include "Wrist.h"
 #include "Kinematics.h"
 #include <deque>
+#include <vector>
 
 class Robot : public frc::TimedRobot {
     public:
@@ -46,7 +47,7 @@ class Robot : public frc::TimedRobot {
         frc::XboxController auxController { 1 };
 
         /// @brief A sendable chooser / dropdown for selecting the current autonomous trajectory
-        frc::SendableChooser<std::string> m_chooser;
+        frc::SendableChooser<drive::AutonomousPath> m_chooser;
 
         /// @brief A string representing the currently selected ""human"" trajectory name
         std::string currentAutonomousState;
@@ -70,7 +71,7 @@ class Robot : public frc::TimedRobot {
         wrist::Wrist wrist;
 
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
-        const std::map<std::string, std::string> mTrajectoryMap {
+        const std::vector<drive::AutonomousPath> mTrajectoryMap {
             { "Mid Balance", "MidBalance"},
             { "Far Mid Cone Balance", "FarMidConeBalance"},
 
@@ -84,7 +85,12 @@ class Robot : public frc::TimedRobot {
 
             { "Far Mid Cone Cone", "FarConeCone"},
             { "Far Mid Cone Cube", "FarConeCube"},
-            { "Far Mid-Cone Cube Balance", "FarMobileConeCubeBalance"},
+            { 
+                "Far Mid-Cone Cube Balance", 
+                "FarMobileConeCubeBalance",
+                { 2.46888_mps, 2.46888_mps },
+                { 0.35_mps_sq, 0.75_mps_sq }
+            },
 
             // { "Far Triple Score", "FarTripleScore"}
 

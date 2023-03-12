@@ -322,10 +322,16 @@ void drive::Drive::SetTrajectory(frc::Pose2d pose) {
     StartNextTrajectory();
 }
 
-void drive::Drive::SetTrajectory(const std::string& pathName, bool resetPose) {
+void drive::Drive::SetTrajectory(const AutonomousPath path, bool resetPose) {
     bFollowTrajectory = true;
+    
+    // Construct a list of dynamic path constraints based on the autonomous path objects
+    std::vector<pathplanner::PathConstraints> constraints = {};
+    for(int i = 0; i < path.velocityOverrides.size(); i++) {
+        constraints[i] = pathplanner::PathConstraints(path.velocityOverrides[i], path.accelerationOverrides[i]);
+    }
 
-    subpaths = PathPlanner::loadPathGroup(pathName, { { 2.46888_mps, 0.35_mps_sq } });
+    subpaths = PathPlanner::loadPathGroup(path.pathName, constraints);
     currentStopPoint = -1;
     
     StartNextTrajectory();

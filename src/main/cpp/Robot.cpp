@@ -16,11 +16,11 @@ Robot::~Robot() {
 }
 
 void Robot::RobotInit() {
-    for (auto const& [human_name, path_file] : mTrajectoryMap)
+    for (auto const traj : mTrajectoryMap)
     {
-        m_chooser.AddOption(human_name, path_file);
+        m_chooser.AddOption(traj.humanName, traj);
     }
-    m_chooser.SetDefaultOption("Autonomous Idle", "Autonomous Idle");
+    m_chooser.SetDefaultOption("Autonomous Idle", { "Autonomous Idle", "Autonomous Idle" });
     
     frc::SmartDashboard::PutData("Auto Modes", &m_chooser);
     drivetrain.SetJoystick(false);
@@ -84,13 +84,13 @@ void Robot::AutonomousInit() {
     // so we should reinitialize the field constants just to be safe.
     fieldConstants.Initialize();
 
-    currentAutonomousState = m_chooser.GetSelected();
+    currentAutonomousState = m_chooser.GetSelected().pathName;
     fmt::print("Currently selected auto path: {}\n", currentAutonomousState);
     if(currentAutonomousState == "Autonomous Idle") { 
         drivetrain.ForceVisionPose(); 
     }
     else { 
-        drivetrain.SetTrajectory(currentAutonomousState, true);
+        drivetrain.SetTrajectory(m_chooser.GetSelected(), true);
     }
     
     // Force the wheels to be facing forward in order to have more accurate auto driving and pathplanning
@@ -683,8 +683,8 @@ void Robot::DisabledInit() {
 
 void Robot::DisabledPeriodic() {
     lighthandler.Rainbow();
-    if(m_chooser.GetSelected() != currentAutonomousState) {
-        currentAutonomousState = m_chooser.GetSelected();
+    if(m_chooser.GetSelected().pathName != currentAutonomousState) {
+        currentAutonomousState = m_chooser.GetSelected().pathName;
         drivetrain.UpdateFieldTrajectory(currentAutonomousState);
     }
 }
