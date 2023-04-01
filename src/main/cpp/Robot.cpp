@@ -342,19 +342,19 @@ void Robot::AutonomousPeriodic() {
             }
             
             // If we've hit -5deg of pitch, we're on the ramp, start driving forward and start the balancing process and get ready to stop driving
-            if(units::math::abs(drivetrain.GetPitch()) > 2_deg && !bHasStartedBalancing) {
+            if(units::math::abs(drivetrain.GetPitch()) > 8_deg && !bHasStartedBalancing) {
                 bHasStartedBalancing = true;
             }
 
             if(bHasStartedBalancing) {
-                if(lastPitch - drivetrain.GetPitch() > (lastPitch * (bFlipPowers ? 1 : -1) + 0.1_deg)) {
+                if(lastPitch - drivetrain.GetPitch() > (lastPitch * (bFlipPowers ? 1 : -1) + 0.03_deg)) {
                     bHasAutoBalanced = true;
                     bForceStop = true;
                     drivetrain.XPattern();
                     drivetrain.ForceStop();
                 }
                 else {
-                    drivetrain.DriveRelative(0.5);
+                    drivetrain.DriveRelative(0.4);
                 }
             }
 
@@ -404,7 +404,7 @@ void Robot::TeleopInit() {
 }
 
 void Robot::TeleopPeriodic() {
-    units::degree_t shoulderGoal = shoulder.GetRotation();
+    units::degree_t shoulderGoal = shoulder.GetRotationalGoal();
     units::meter_t armGoal = arm.GetPositionalGoal();
     units::degree_t wristGoal = wrist.GetRotation();
 

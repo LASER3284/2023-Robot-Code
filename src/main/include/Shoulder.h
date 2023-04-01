@@ -31,7 +31,7 @@ namespace shoulder {
             static constexpr int kShoulderPortID = 0;
 
             /// @brief The angle offset of the arm where 0_deg is facing forward, horizontally
-            static constexpr units::degree_t kAngleOffset = 96.0_deg;
+            static constexpr units::degree_t kAngleOffset = 107.0_deg;
 
             /// @brief The gear ratio from the main encoder to the final sprocket/arm shaft
             static constexpr double gearRatio = 1 / 261.8182;
@@ -63,6 +63,10 @@ namespace shoulder {
             /// The rotation is 0 degrees parallel to the bottom of the frame.
             /// @param rot The rotation goal to use.
             void SetRotationGoal(units::degree_t rot);
+
+            units::degree_t GetRotationalGoal() {
+                return shoulderGoal.position;
+            }
 
             /// @brief Manually controls the arm with a set percentage
             /// @param percentage The percent output to move the motors with
