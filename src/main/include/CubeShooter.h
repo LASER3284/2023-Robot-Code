@@ -26,8 +26,8 @@ namespace shooter {
             static constexpr double kI = 0.0;
             static constexpr double kD = 0.0;
 
-            static constexpr auto kV = 0.0_V * 1.0_rad_per_s;
-            static constexpr auto kA = 0.0_V * 1.0_rad_per_s_sq;
+            static constexpr auto kV = 0.0_V / 1.0_rad_per_s;
+            static constexpr auto kA = 0.0_V / 1.0_rad_per_s_sq;
             static constexpr auto kS = 0.0_V;
 
             static constexpr auto kGroundSetpoint = 0.0_rad_per_s;
