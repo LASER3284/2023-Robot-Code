@@ -6,6 +6,7 @@
 #include <frc/geometry/Translation2d.h>
 #include <frc/geometry/Translation3d.h>
 #include <frc/DriverStation.h>
+#include "pathplanner/lib/PathPlannerTrajectory.h"
 
 namespace constants {
     class FieldConstants {

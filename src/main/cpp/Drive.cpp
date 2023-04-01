@@ -20,7 +20,7 @@ drive::Drive::Drive(frc::Joystick* controller_in) {
     frc::SmartDashboard::PutData("field", &field);
 
     photonPoseEstimator.SetMultiTagFallbackStrategy(photonlib::PoseStrategy::CLOSEST_TO_REFERENCE_POSE);
-    poseEstimator.SetVisionMeasurementStdDevs({4.23, 4.23, constants::Pi * 2});
+    poseEstimator.SetVisionMeasurementStdDevs({4, 4, constants::Pi * 2});
 }
 
 void drive::Drive::SetJoystick(bool state) {
@@ -175,7 +175,7 @@ void drive::Drive::Tick() {
         xVelocity,
         yVelocity,
         rotation,
-        poseEstimator.GetEstimatedPosition().Rotation()
+        gyro.GetRotation2d()
     );
 
     wpi::array<frc::SwerveModuleState, 4> states = kinematics.ToSwerveModuleStates(fieldRelative ? relspeeds : nonrelspeeds);
@@ -328,12 +328,20 @@ void drive::Drive::SetTrajectory(const AutonomousPath path, bool resetPose) {
     // Construct a list of dynamic path constraints based on the autonomous path objects
     std::vector<pathplanner::PathConstraints> constraints = {};
     for(int i = 0; i < path.velocityOverrides.size(); i++) {
-        constraints[i] = pathplanner::PathConstraints(path.velocityOverrides[i], path.accelerationOverrides[i]);
+        constraints.push_back(pathplanner::PathConstraints(path.velocityOverrides[i], path.accelerationOverrides[i]));
     }
 
     subpaths = PathPlanner::loadPathGroup(path.pathName, constraints);
     currentStopPoint = -1;
     
+    // In order to properly initialize the paths, you need to flip the trajectory based on the alliance color (red only).
+    const frc::DriverStation::Alliance alliance = frc::DriverStation::GetAlliance();
+    if(alliance == frc::DriverStation::Alliance::kRed) {
+        for(int i = 0; i < subpaths.size(); i++) {
+            subpaths[i] = pathplanner::PathPlannerTrajectory::transformTrajectoryForAlliance(subpaths[i], alliance);
+        }
+    }
+
     StartNextTrajectory();
 
     if(resetPose) {
@@ -348,7 +356,11 @@ void drive::Drive::SetTrajectory(const AutonomousPath path, bool resetPose) {
 void drive::Drive::UpdateFieldTrajectory(const std::string& pathName) {
     const std::string file_path = (frc::filesystem::GetDeployDirectory() + "/pathplanner/" + pathName + ".path");
     if(std::filesystem::exists(file_path)) {
-        const auto path = PathPlanner::loadPath(pathName, { 1.23444_mps, 0.25_mps_sq } );
+        const auto path = pathplanner::PathPlannerTrajectory::transformTrajectoryForAlliance(
+            PathPlanner::loadPath(pathName, { 1.23444_mps, 0.25_mps_sq } ),
+            frc::DriverStation::GetAlliance()
+        );
+        
         field.GetObject("trajectory")->SetTrajectory(path.asWPILibTrajectory());
     }
 }

@@ -3,7 +3,7 @@
 wrist::Wrist::Wrist() {
     wristMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
     wristMotor.SetSmartCurrentLimit(25);
-    wristMotor.SetInverted(false);
+    wristMotor.SetInverted(true);
     wristEncoder.SetPosition(0);
     SetRotationGoal(GetRotation());
     wristTimer.Restart();
@@ -13,25 +13,18 @@ void wrist::Wrist::Tick(units::degree_t shoulderRotation) {
     frc::SmartDashboard::PutNumber("wrist_angle", GetRotation().value());
     frc::SmartDashboard::PutNumber("wrist_pos", wristEncoder.GetPosition());
     frc::SmartDashboard::PutNumber("wrist_goal", units::degree_t(wristGoal.position).value());
-    frc::SmartDashboard::PutNumber("wrist_last_setpoint", GetLastSetpoint().value());
     frc::SmartDashboard::PutNumber("wristTimer_s", wristTimer.Get().value());
 
     if(manualPercentage != 0) {
         wristMotor.SetVoltage((manualPercentage * 12_V));
         wristTimer.Restart();
         wristGoal = { GetRotation(), 0_deg_per_s };
+        wristSetpoint = { GetRotation(), 0_deg_per_s };
     }
     else {
         // Since the movements on the end of the wrist are amplified by the shoulder, we really don't care too much about
         // extreme precision on the wrist most of the time
-        if(wristGoal.position != GetRotation()) {
-            if(!wristTimer.HasElapsed(0.25_s)) {
-                fmt::print("Overriding wrist goal...\n");
-                controller.Reset();
-                lastSetpoint = GetRotation();
-                wristGoal = { lastSetpoint, 0_deg_per_s };
-            }
-
+        if(units::math::abs(wristGoal.position - GetRotation()) > 0.5_deg) {
             // Create a motion profile with the given maximum velocity and maximum 
             // acceleration constraints for the next setpoint, the desired goal, and the
             // current setpoint.
@@ -42,7 +35,6 @@ void wrist::Wrist::Tick(units::degree_t shoulderRotation) {
             };
 
             wristSetpoint = rotationalProfile.Calculate(20_ms);
-            lastSetpoint = wristSetpoint.position;
         }
 
         frc::SmartDashboard::PutNumber("wristSetpoint_velocity", units::degrees_per_second_t(wristSetpoint.velocity).value());
@@ -51,7 +43,7 @@ void wrist::Wrist::Tick(units::degree_t shoulderRotation) {
 
         units::volt_t ff = (Constants::kS * wpi::sgn(wristSetpoint.velocity)) + (Constants::kG * units::math::cos(shoulderRotation)) + ((Constants::kV * wristSetpoint.velocity));
         frc::SmartDashboard::PutNumber("wrist_ff_v", ff.value());
-        wristMotor.SetVoltage(ff + units::volt_t(controller.Calculate(units::radian_t(GetRotation()).value(), wristSetpoint.position.value())));
+        wristMotor.SetVoltage(ff + units::volt_t(controller.Calculate(units::radian_t(GetRotation()).value(), wristGoal.position.value())));
     }
 }
 

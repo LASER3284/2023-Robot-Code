@@ -21,6 +21,11 @@ namespace arm {
 
             /// @brief The outer diameter of the sprocket * pi in order to convert to linear units
             static constexpr units::meter_t kSprocketDiameter = (0.0381762_m * constants::Pi);
+
+            /// @brief The constant kG value for the arm extension
+            /// This value is defined here rather than in the feedforward because we need to do custom math with it due to the extension being on the pivot
+            /// Since the effect of gravity would change based on the shoulder angle rather than be a constant value
+            static constexpr units::volt_t kG = 0.31097_V;
     };
 
     class Arm {
@@ -29,15 +34,23 @@ namespace arm {
 
             units::meter_t GetPosition();
 
+            units::meters_per_second_t GetVelocity();
+
             void SetPositionGoal(units::meter_t distance);
 
-            void Tick();
+            units::meter_t GetPositionalGoal() { return extensionGoal.position; }
+
+            void Tick(units::degree_t shoulderRotation);
 
             void ToggleControl(bool enable) { bEnabled = enable; }
 
             void ManualControl(double percentage) { manualPercentage = percentage; }
 
-            void RefreshController() { extensionSetpoint = { GetPosition(), 0_mps }; }
+            void RefreshController() {
+                positionController.Reset();
+                extensionSetpoint = { GetPosition(), 0_mps }; 
+                extensionGoal = { GetPosition(), 0_mps };
+            }
         private:
             bool bEnabled = false;
             double manualPercentage = 0.0;
@@ -46,14 +59,14 @@ namespace arm {
             rev::SparkMaxRelativeEncoder extensionEncoder = extensionMotor.GetEncoder();
 
             /// @brief The feedforward object for the extension of the arm (it acts an ""elevator"")
-            frc::ElevatorFeedforward feedforward { 0.42743_V, 0_V, 15.224_V / 1_mps, 0.72115_V / 1_mps_sq };
+            frc::ElevatorFeedforward feedforward { 0.0_V, 0.0_V, 14.512_V / 1_mps, 0.78856_V / 1_mps_sq };
 
-            frc::PIDController positionController { 33.389, 0, 2.1352 };
+            frc::PIDController positionController { 0, 0, 0.0 };
 
-            /// @brief The trapezoidal profile constraints for the shoulder rotation
-            /// This specifies the max rotational velocity *and* the max rotational acceleration
+            /// @brief The trapezoidal profile constraints for the arm extension
+            /// This specifies the max velocity *and* the max acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::meters>::Constraints constraints { 0.5_mps, 0.25_mps_sq };
+            frc::TrapezoidProfile<units::meters>::Constraints constraints { 0.68_mps, 1.36_mps_sq };
 
             /// @brief The current goal to rotate the shoulder to
             frc::TrapezoidProfile<units::meters>::State extensionGoal;

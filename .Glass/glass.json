@@ -17,6 +17,8 @@
       "/LiveWindow/Ungrouped/Talon FX [10]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [11]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [14]": "Motor Controller",
+      "/LiveWindow/Ungrouped/Talon FX [18]": "Motor Controller",
+      "/LiveWindow/Ungrouped/Talon FX [35]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [7]": "Motor Controller",
       "/LiveWindow/Ungrouped/navX-Sensor[1]": "Gyro",
       "/SmartDashboard/Auto Modes": "String Chooser",
@@ -49,38 +51,6 @@
                 1.0
               ],
               "id": "NT:/SmartDashboard/intakeCurrent_a"
-            }
-          ]
-        }
-      ]
-    },
-    "Plot <1>": {
-      "plots": [
-        {
-          "axis": [
-            {
-              "autoFit": true
-            }
-          ],
-          "height": 833,
-          "series": [
-            {
-              "color": [
-                0.2980392277240753,
-                0.44705885648727417,
-                0.6901960968971252,
-                1.0
-              ],
-              "id": "NT:/SmartDashboard/shoulder_angle_deg"
-            },
-            {
-              "color": [
-                0.8666667342185974,
-                0.5176470875740051,
-                0.32156863808631897,
-                1.0
-              ],
-              "id": "NT:/SmartDashboard/shoulderSetpoint_position"
             },
             {
               "color": [
@@ -89,7 +59,7 @@
                 0.4078431725502014,
                 1.0
               ],
-              "id": "NT:/SmartDashboard/shoulderOverride"
+              "id": "NT:/SmartDashboard/filteredIntakeCurrent_a"
             },
             {
               "color": [
@@ -98,16 +68,37 @@
                 0.32156863808631897,
                 1.0
               ],
-              "id": "NT:/SmartDashboard/shoulderSetpoint_velocity"
+              "id": "NT:/SmartDashboard/intakeSpeed_rpm"
+            },
+            {
+              "color": [
+                0.5058823823928833,
+                0.44705885648727417,
+                0.7019608020782471,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/intakePosition"
+            },
+            {
+              "color": [
+                1.0,
+                0.35971224308013916,
+                0.0,
+                1.0
+              ],
+              "digital": "Analog",
+              "id": "NT:/SmartDashboard/hasElement",
+              "weight": 7.450580596923828e-08
             }
           ]
         }
       ],
       "window": {
+        "name": "Intake",
         "visible": false
       }
     },
-    "Plot <2>": {
+    "Plot <3>": {
       "plots": [
         {
           "axis": [
@@ -115,7 +106,7 @@
               "autoFit": true
             }
           ],
-          "height": 497,
+          "height": 775,
           "series": [
             {
               "color": [
@@ -124,7 +115,7 @@
                 0.6901960968971252,
                 1.0
               ],
-              "id": "NT:/SmartDashboard/shoulder_effort_v"
+              "id": "NT:/SmartDashboard/wrist_angle"
             },
             {
               "color": [
@@ -133,7 +124,7 @@
                 0.32156863808631897,
                 1.0
               ],
-              "id": "NT:/SmartDashboard/shoulder_measurement"
+              "id": "NT:/SmartDashboard/wristGoal_position"
             },
             {
               "color": [
@@ -142,42 +133,22 @@
                 0.4078431725502014,
                 1.0
               ],
-              "id": "NT:/SmartDashboard/shoulder_setpoint"
-            }
-          ]
-        }
-      ],
-      "window": {
-        "visible": false
-      }
-    },
-    "Plot <3>": {
-      "plots": [
-        {
-          "height": 332,
-          "series": [
-            {
-              "color": [
-                0.2980392277240753,
-                0.44705885648727417,
-                0.6901960968971252,
-                1.0
-              ],
-              "id": "NT:/SmartDashboard/shoulder_setpoint"
+              "id": "NT:/SmartDashboard/wristSetpoint_position"
             },
             {
               "color": [
-                0.8666667342185974,
-                0.5176470875740051,
+                0.7686275243759155,
+                0.30588236451148987,
                 0.32156863808631897,
                 1.0
               ],
-              "id": "NT:/SmartDashboard/shoulder_measurement"
+              "id": "NT:/SmartDashboard/wristSetpoint_velocity"
             }
           ]
         }
       ],
       "window": {
+        "name": "Wrist",
         "visible": false
       }
     },
@@ -189,7 +160,7 @@
               "autoFit": true
             }
           ],
-          "height": 466,
+          "height": 649,
           "series": [
             {
               "color": [
@@ -222,6 +193,150 @@
         }
       ],
       "window": {
+        "name": "Auto Balancing"
+      }
+    },
+    "Plot <5>": {
+      "plots": [
+        {
+          "axis": [
+            {
+              "autoFit": true
+            }
+          ],
+          "height": 829,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/shoulder_angle_deg"
+            },
+            {
+              "color": [
+                0.8666667342185974,
+                0.5176470875740051,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/shoulderGoal_position"
+            },
+            {
+              "color": [
+                0.3333333432674408,
+                0.658823549747467,
+                0.4078431725502014,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/shoulderSetpoint_position"
+            },
+            {
+              "color": [
+                0.7686275243759155,
+                0.30588236451148987,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/shoulder_effort_v"
+            },
+            {
+              "color": [
+                0.5058823823928833,
+                0.44705885648727417,
+                0.7019608020782471,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/shoulder_measurement"
+            },
+            {
+              "color": [
+                0.5764706134796143,
+                0.4705882668495178,
+                0.3764706254005432,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/shoulder_setpoint"
+            }
+          ]
+        }
+      ],
+      "window": {
+        "name": "Shoulder",
+        "visible": false
+      }
+    },
+    "Plot <6>": {
+      "plots": [
+        {
+          "axis": [
+            {
+              "autoFit": true
+            }
+          ],
+          "height": 727,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/arm_extension_m"
+            },
+            {
+              "color": [
+                0.3333333432674408,
+                0.658823549747467,
+                0.4078431725502014,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/extensionSetpoint_pos"
+            },
+            {
+              "color": [
+                0.7686275243759155,
+                0.30588236451148987,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/extensionSetpoint_vel"
+            },
+            {
+              "color": [
+                0.8666667342185974,
+                0.5176470875740051,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/arm_extension_goal_m"
+            },
+            {
+              "color": [
+                0.5058823823928833,
+                0.44705885648727417,
+                0.7019608020782471,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/extensionFF_v"
+            },
+            {
+              "color": [
+                0.5764706134796143,
+                0.4705882668495178,
+                0.3764706254005432,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/arm_extension_mps"
+            }
+          ]
+        }
+      ],
+      "window": {
+        "name": "Arm Extension",
         "visible": false
       }
     }

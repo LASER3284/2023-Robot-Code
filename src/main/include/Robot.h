@@ -73,28 +73,44 @@ class Robot : public frc::TimedRobot {
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::vector<drive::AutonomousPath> mTrajectoryMap {
             { "Mid Balance", "MidBalance"},
-            { "Far Mid Cone Balance", "FarMidConeBalance"},
-
             { "Mobile", "Mobile"},
             { "Mobile Mid-Cone", "MobileCone"},
-            
+            { "Mid Cone Balance", "MidBalance"},
+            /*
+            { 
+                "Mid Cone Cube", "ConeCube",
+                { 2.46888_mps, 2.46888_mps },
+                { 0.4_mps_sq, 1_mps_sq }
+            },
+            { 
+                "Mid-Cone Cube Balance", "ConeCubeBalance",
+                { 2.46888_mps, 2.46888_mps },
+                { 0.4_mps_sq, 2.46888_mps_sq }
+            },
+            */ 
             { "Far Mobile", "FarMobile"},
             { "Far Mobile Mid-Cone", "FarMobileCone"},
-
             { "Far Mobile Mid-Cone Balance", "FarMobileConeBalance"},
-
-            { "Far Mid Cone Cone", "FarConeCone"},
-            { "Far Mid Cone Cube", "FarConeCube"},
             { 
-                "Far Mid-Cone Cube Balance", 
-                "FarMobileConeCubeBalance",
+                "Far Mid Cone Cone", "FarConeCone",
                 { 2.46888_mps, 2.46888_mps },
-                { 0.35_mps_sq, 0.75_mps_sq }
+                { 0.35_mps_sq, 1.25_mps_sq }
             },
-
-            // { "Far Triple Score", "FarTripleScore"}
-
-            { "Test Path", "TestPath"}
+            { 
+                "Mid Cone Cone", "MidConeCone"
+            }
+            /*
+            { 
+                "Far Mid Cone Cube", "FarConeCube",
+                { 2.46888_mps, 2.46888_mps },
+                { 0.35_mps_sq, 1.25_mps_sq }
+            },
+            { 
+                "Far Mid-Cone Cube Balance", "FarMobileConeCubeBalance",
+                { 2.46888_mps, 2.46888_mps },
+                { 0.35_mps_sq, 2_mps_sq }
+            },
+            */
         };
 
         /// @brief Whether or not the robot has processed the starting action within auto
@@ -148,4 +164,5 @@ class Robot : public frc::TimedRobot {
 
         bool bHasAutoBalanced = false;
         bool bHasStartedBalancing = false;
+        units::degree_t lastPitch = 0_deg;
 };

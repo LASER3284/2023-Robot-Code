@@ -19,8 +19,9 @@
 #include <frc/controller/ProfiledPIDController.h>
 #include <frc/Errors.h>
 #include <filesystem>
-#include <pathplanner/lib/PathPlanner.h>
-#include <pathplanner/lib/commands/PPSwerveControllerCommand.h>
+#include "pathplanner/lib/PathPlanner.h"
+#include "pathplanner/lib/commands/PPSwerveControllerCommand.h"
+#include "FieldConstants.h"
 #include <photonlib/PhotonCamera.h>
 #include <photonlib/PhotonPoseEstimator.h>
 #include <frc/smartdashboard/Field2d.h>
@@ -183,5 +184,7 @@ namespace drive {
 
             /// @brief The PPSwerveControllerCommand for the current loaded subpath / stop point
             std::unique_ptr<pathplanner::PPSwerveControllerCommand> pathCommand;
+
+            frc::DriverStation::Alliance lastAlliance;
     };
 }

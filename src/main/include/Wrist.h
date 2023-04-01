@@ -20,15 +20,14 @@ namespace wrist {
             static constexpr int kWristMotorID = 60;
 
             /// @brief The gear ratio from the NEO 550 to the output of the wrist.
-            static constexpr double kWristGearRatio = 90.0 * (36.0 / 24.0);
+            static constexpr double kWristGearRatio = 90.0 * (70.0 / 48.0);
 
             /// @brief The starting angle for the wrist
-            static constexpr units::degree_t kStartingAngle = 90_deg;
+            static constexpr units::degree_t kStartingAngle = 98_deg;
 
-            static constexpr units::volt_t kS = 0.35143_V;
-            static constexpr units::volt_t kG = 0.46275_V;
-            static constexpr auto kV = 1.235_V / 1_rad_per_s;
-
+            static constexpr units::volt_t kS = 0.13643_V;
+            static constexpr units::volt_t kG = 0.1052_V;
+            static constexpr auto kV = 1.2617_V / 1_rad_per_s;
             static constexpr units::degree_t kMaxAngle = 185_deg;
     };
 
@@ -58,16 +57,23 @@ namespace wrist {
             void ManualControl(double percentage) { manualPercentage = percentage; }
 
             void RefreshController() { 
+                wristGoal = { GetRotation(), 0_rad_per_s };
                 wristSetpoint = { GetRotation(), 0_rad_per_s };
+            }
+
+            void ResetRotation() { 
+                wristEncoder.SetPosition(-38.28125);
+                SetRotationGoal(GetRotation());
+                wristTimer.Restart();
             }
         private:
             rev::CANSparkMax wristMotor { Constants::kWristMotorID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
             rev::SparkMaxRelativeEncoder wristEncoder = wristMotor.GetEncoder();
 
             frc2::PIDController controller {
-                5.0334,    // kP
+                5.9051,    // kP
                 0.0,    // kI
-                0.87225    // kD
+                1.0358    // kD
             };
 
             double manualPercentage = 0.0;
@@ -75,7 +81,7 @@ namespace wrist {
             /// @brief The trapezoidal profile constraints for the shoulder rotation
             /// This specifies the max rotational velocity *and* the max rotational acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 0_deg_per_s, 0_deg_per_s_sq };
+            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 120_deg_per_s, 80_deg_per_s_sq };
 
             /// @brief The current goal to rotate the wrist to
             frc::TrapezoidProfile<units::radians>::State wristGoal;

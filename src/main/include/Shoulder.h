@@ -31,7 +31,7 @@ namespace shoulder {
             static constexpr int kShoulderPortID = 0;
 
             /// @brief The angle offset of the arm where 0_deg is facing forward, horizontally
-            static constexpr units::degree_t kAngleOffset = 334.0_deg;
+            static constexpr units::degree_t kAngleOffset = 96.0_deg;
 
             /// @brief The gear ratio from the main encoder to the final sprocket/arm shaft
             static constexpr double gearRatio = 1 / 261.8182;
@@ -82,8 +82,16 @@ namespace shoulder {
                 bEnabled = enable;
             }
 
-            void RefreshController() { shoulderSetpoint = { GetRotation(), 0_rad_per_s }; }
+            void RefreshController() { 
+                shoulderSetpoint = { GetRotation(), 0_rad_per_s };
+                shoulderGoal = { GetRotation(), 0_rad_per_s };
+            }
 
+            void ResetRotation() {
+                manualOffset = 0_deg;
+                manualOffset = (90_deg - GetRotation());
+                RefreshController();
+            }
         private:
             /// @brief The main motor for driving the rotation of the shoulder
             ctre::phoenix::motorcontrol::can::WPI_TalonFX motor { Constants::kShoulderMotorID };
@@ -94,10 +102,10 @@ namespace shoulder {
             /// @brief The absolute encoder (thrifty encoder) used for locating the shoulder
             frc::AnalogEncoder encoder { Constants::kShoulderPortID };
 
-            frc2::PIDController angleController { 
-                0.0001546, // kP
+            frc2::PIDController angleController {
+                0.0, // kP
                 0.0, // kI
-                9.4135E-06 // kD
+                0.0 // kD
             };
 
             bool bEnabled = false;
@@ -107,7 +115,7 @@ namespace shoulder {
             /// @brief The trapezoidal profile constraints for the shoulder rotation
             /// This specifies the max rotational velocity *and* the max rotational acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 120_deg_per_s, 60_deg_per_s_sq };
+            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 40_deg_per_s, 60_deg_per_s_sq };
 
             /// @brief The current goal to rotate the shoulder to
             frc::TrapezoidProfile<units::radians>::State shoulderGoal;
@@ -118,5 +126,7 @@ namespace shoulder {
             /// @brief A timer used for overriding the manual percentage vs the feedforward calculations
             frc::Timer shoulderTimer;
 
+            units::degree_t manualOffset = 0_deg;
+            units::degree_t encoderSeed = 0_deg;
     };
 }
