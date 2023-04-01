@@ -24,6 +24,9 @@ shoulder::Shoulder::Shoulder() {
     encoderSeed = GetRotation();
 
     frc::SmartDashboard::PutData("shoulder_encoder", &encoder);
+
+    shoulderGoal = { GetRotation(), 0_deg_per_s };
+    shoulderSetpoint = { GetRotation(), 0_deg_per_s };
 }
 
 void shoulder::Shoulder::Tick(units::meter_t armExtension) {
