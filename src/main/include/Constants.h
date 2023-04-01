@@ -15,7 +15,7 @@ namespace constants {
 
     // Logitech Flight Stick Button Assignments.
     enum LogButtons	 		{ eButtonTrigger = 1, eButton2, eButton3, eButton4, eButton5, eButton6, eButton7, eButton8, eButton9, eButton10, eButton11, eButton12};
-
+   /*
     enum ButtonBoardButtons {
         eUp = 1,
         eOut = 2,
@@ -32,7 +32,7 @@ namespace constants {
         eForkDown = 11,
         eForkUp = 12,
     };
-
+    */
     enum ButtonBoardAxis			{ eJoystickAxisX = 0, eJoyStickAxisY };
 
     static double mapScalarToRange(double inValue, double out_min, double out_max, double in_min = -1, double in_max = 1) {
