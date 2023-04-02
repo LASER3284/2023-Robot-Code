@@ -408,24 +408,17 @@ void Robot::TeleopPeriodic() {
     units::meter_t armGoal = arm.GetPositionalGoal();
     units::degree_t wristGoal = wrist.GetRotation();
 
-    if(auxController.GetLeftTriggerAxis() >= 0.5) {
+    if(auxController.Get(constants::ButtonBoardButtons::eGround)) {
         lighthandler.SetColor(frc::Color::kOrange);
         intake.ConeMode();
-    }
-    else if (auxController.GetRightTriggerAxis() >= 0.5)
-    {
-        lighthandler.SetColor(frc::Color::kPurple);
-        intake.CubeMode();
-    }
-    else if(auxController.GetRightBumper()) {
+    } else if (auxController.Get(constants::ButtonBoardButtons::eGroundTipped)) {
+        lighthandler.SetColor(frc::Color::kOrange);
+        intake.ConeMode();
+    } else if (auxController.Get(constants::ButtonBoardButtons::eShoot)) {
         lighthandler.SetColor(frc::Color::kRed);
+        // TODO
         intake.Spit();
-    }
-    else if(auxController.GetLeftBumper()) {
-        lighthandler.SetColor(frc::Color::kRed);
-        intake.Shoot();
-    }
-    else if(intake.HasElement()) {
+    } else if (intake.HasElement()) {
         // Set the lights to green whenever we've picked something up
         lighthandler.SetColor(frc::Color::kGreen);
 
@@ -437,8 +430,7 @@ void Robot::TeleopPeriodic() {
 
         // After 2 seconds, we want to stop rumbling the controller in order to avoid annoying the driver.
         driveController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, rumbleTimer.HasElapsed(1_s) ? 0.0 : 0.5);
-    }
-    else {
+    } else {
         rumbleTimer.Reset();
         rumbleTimer.Stop();
         intake.Stop();

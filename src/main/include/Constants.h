@@ -21,12 +21,15 @@ namespace constants {
         eMid,
         eHigh,
         ePanic,
+        eShoot,
         eGroundTipped,
         eGround,
         eCube,
         eSingle,
         eShelf,
-        eSwitch
+        eSwitch,
+        eExtend,
+        eRetract
     };
 
     static double mapScalarToRange(double inValue, double out_min, double out_max, double in_min = -1, double in_max = 1) {

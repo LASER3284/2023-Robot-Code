@@ -22,6 +22,7 @@
 #include "Arm.h"
 #include "Wrist.h"
 #include "Kinematics.h"
+#include "AuxController.h"
 #include <deque>
 #include <vector>
 
@@ -44,7 +45,7 @@ class Robot : public frc::TimedRobot {
 
     private:
         frc::Joystick driveController { 0 };
-        frc::XboxController auxController { 1 };
+        controllers::AuxController auxController {};
 
         /// @brief A sendable chooser / dropdown for selecting the current autonomous trajectory
         frc::SendableChooser<drive::AutonomousPath> m_chooser;
