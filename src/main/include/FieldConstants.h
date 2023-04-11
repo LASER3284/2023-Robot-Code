@@ -15,8 +15,9 @@ namespace constants {
                 eUp = 0,
                 eMid,
                 eGround,
+                eGroundSpit,
                 eIntake,
-                eStopped
+                eStopped,
             };
 
             static constexpr units::inch_t fieldLength = 651.25_in;

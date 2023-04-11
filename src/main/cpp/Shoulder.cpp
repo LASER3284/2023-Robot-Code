@@ -37,9 +37,10 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
     if(bEnabled) {
         if(manualPercentage != 0.0) {
             motor.SetVoltage(manualPercentage * 12_V);
-            shoulderTimer.Restart();
             shoulderGoal = { GetRotation(), 0_deg_per_s };
             shoulderSetpoint = { GetRotation(), 0_deg_per_s };
+            shoulderTimer.Reset();
+            shoulderTimer.Stop();
         }
         else {
             if(units::math::abs(shoulderGoal.position - GetRotation()) > 1.5_deg) {
@@ -55,8 +56,12 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
                 shoulderSetpoint = rotationalProfile.Calculate(20_ms);
             }
             else {
-                shoulderSetpoint = { GetRotation(), 0_deg_per_s };
-                shoulderGoal = { GetRotation(), 0_deg_per_s };
+                motor.SetVoltage(0_V);
+                shoulderTimer.Start();
+                if(shoulderTimer.HasElapsed(0.125_s)) {
+                    shoulderSetpoint = { GetRotation(), 0_deg_per_s };
+                    shoulderGoal = { GetRotation(), 0_deg_per_s };   
+                }
             }
 
             frc::SmartDashboard::PutNumber("shoulderSetpoint_velocity", units::degrees_per_second_t(shoulderSetpoint.velocity).value());
@@ -64,7 +69,7 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
             frc::SmartDashboard::PutNumber("shoulderGoal_position", units::degree_t(shoulderGoal.position).value());
 
             AdjustFeedforward(
-                kinematics::Kinematics::CalculateShoulderFeedforward(armExtension, shoulderSetpoint.position, shoulderSetpoint.velocity)
+                kinematics::Kinematics::CalculateShoulderFeedforward(armExtension, GetRotation(), shoulderSetpoint.velocity)
             );
 
             const auto control_effort_v = angleController.Calculate(

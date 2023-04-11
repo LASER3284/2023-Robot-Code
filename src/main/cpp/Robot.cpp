@@ -85,7 +85,7 @@ void Robot::RobotPeriodic() {
 
     bool intakeFlipping = frc::SmartDashboard::GetBoolean("intakeFlipping", true);
     if(intakeFlipping) {
-        if(shoulder.GetRotation() >= 40_deg) {
+        if(shoulder.GetRotation() >= 95_deg) {
             if(wrist.GetRotation() > 45_deg) {
                 intake.FlipDirection(true);
             }
@@ -101,6 +101,20 @@ void Robot::RobotPeriodic() {
                 intake.FlipDirection(true);
             }
         }
+    }
+
+    frc::SmartDashboard::PutNumber("angularFlywheelVelocity", shooter.GetAngularFlywheelVelocity().value());
+    frc::SmartDashboard::PutNumber("angularIntakeVelocity", shooter.GetAngularIntakeVelocity().value());
+    frc::SmartDashboard::PutNumber("flywheelOutput", shooter.GetFlywheelOutput());
+    frc::SmartDashboard::PutNumber("intakeOutput", shooter.GetIntakeOutput());
+    frc::SmartDashboard::PutNumber("flywheelCurrent", shooter.GetFlywheelCurrent().value());
+    frc::SmartDashboard::PutBoolean("shooterHasElement", shooter.HasElement());
+
+    if(abs(shooter.GetIntakeOutput()) > 0.1) {
+        intakedCube = true;
+    }
+    else if(abs(intake.GetOutput()) > 0.1) {
+        intakedCube = false;
     }
 }
 
@@ -142,7 +156,7 @@ void Robot::AutonomousPeriodic() {
     frc::SmartDashboard::PutBoolean("bHasStartedBalancing", bHasStartedBalancing);
     frc::SmartDashboard::PutBoolean("bHasAutoBalanced", bHasAutoBalanced);
 
-    units::degree_t shoulderGoal = shoulder.GetRotation();
+    units::degree_t shoulderGoal = shoulder.GetRotationalGoal();
     units::meter_t armGoal = arm.GetPositionalGoal();
     units::degree_t wristGoal = wrist.GetRotation();
 
@@ -169,6 +183,34 @@ void Robot::AutonomousPeriodic() {
             wristGoal = 10_deg;
 
             if(units::math::abs(shoulder.GetRotation() - shoulderGoal) <= 2.5_deg) {
+                autoTimer.Start();
+                autoTimerRunning = true;
+            }
+
+            if(autoTimer.HasElapsed(0.5_s)) {
+                bHasProcessedStartingAction = true;
+                autoTimer.Reset();
+                autoTimer.Stop();
+            }
+            else if(autoTimer.HasElapsed(0.25_s)) {
+                intake.Stop();
+                shoulderGoal = 90_deg;
+                armGoal = 0_m;
+                wristGoal = 0_deg;
+            }
+            else if(autoTimer.HasElapsed(0.125_s)) {
+                intake.Shoot();
+            }
+        }
+        else if(currentAutonomousState == "HighBalance") {
+            shoulderGoal = 148_deg;
+            wristGoal = 0_deg;
+            
+            if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 45_deg) {
+                armGoal = 0.76_m;
+            }
+
+            if(units::math::abs(shoulder.GetRotation() - shoulderGoal) <= 2.5_deg && units::math::abs(arm.GetPosition() - armGoal) <= 4_in) {
                 autoTimer.Start();
                 autoTimerRunning = true;
             }
@@ -232,7 +274,7 @@ void Robot::AutonomousPeriodic() {
                 armGoal = 0_m;
                 wristGoal = 0_deg;
             }
-            else if(currentAutonomousState == "MidBalance") {
+            else if(currentAutonomousState == "MidBalance" || currentAutonomousState == "HighBalance") {
                 shoulderGoal = 90_deg;
                 armGoal = 0_m;
                 wristGoal = 0_deg;
@@ -316,7 +358,7 @@ void Robot::AutonomousPeriodic() {
         }
 
     }
-    else if(currentAutonomousState == "MidBalance" || currentAutonomousState == "FarMobileConeBalance"  || currentAutonomousState == "FarMidConeBalance"  || currentAutonomousState == "TestPath" || currentAutonomousState == "FarMobileConeCubeBalance"  || currentAutonomousState == "ConeCubeBalance") {
+    else if(currentAutonomousState == "MidBalance" || currentAutonomousState == "FarMobileConeBalance"  || currentAutonomousState == "FarMidConeBalance"  || currentAutonomousState == "TestPath" || currentAutonomousState == "FarMobileConeCubeBalance"  || currentAutonomousState == "ConeCubeBalance" || currentAutonomousState == "HighBalance") {
         // Move the arm down and start driving forward in order to shift the CoG towards the charge station
         shoulderGoal = 75_deg;
         armGoal = 0_m;
@@ -344,17 +386,18 @@ void Robot::AutonomousPeriodic() {
             // If we've hit -5deg of pitch, we're on the ramp, start driving forward and start the balancing process and get ready to stop driving
             if(units::math::abs(drivetrain.GetPitch()) > 8_deg && !bHasStartedBalancing) {
                 bHasStartedBalancing = true;
+                autoTimer.Reset();
             }
 
             if(bHasStartedBalancing) {
-                if(lastPitch - drivetrain.GetPitch() > (lastPitch * (bFlipPowers ? 1 : -1) + 0.03_deg)) {
+                if(lastPitch - drivetrain.GetPitch() > (lastPitch * (bFlipPowers ? 1 : -1) + 0.02_deg)) {
                     bHasAutoBalanced = true;
                     bForceStop = true;
                     drivetrain.XPattern();
                     drivetrain.ForceStop();
                 }
                 else {
-                    drivetrain.DriveRelative(0.4);
+                    drivetrain.DriveRelative(0.25);
                 }
             }
 
@@ -412,20 +455,11 @@ void Robot::TeleopPeriodic() {
         lighthandler.SetColor(frc::Color::kOrange);
         intake.ConeMode();
     }
-    else if (auxController.GetRightTriggerAxis() >= 0.5)
-    {
-        lighthandler.SetColor(frc::Color::kPurple);
-        intake.CubeMode();
-    }
     else if(auxController.GetRightBumper()) {
         lighthandler.SetColor(frc::Color::kRed);
         intake.Spit();
     }
-    else if(auxController.GetLeftBumper()) {
-        lighthandler.SetColor(frc::Color::kRed);
-        intake.Shoot();
-    }
-    else if(intake.HasElement()) {
+    else if(intake.HasElement() || shooter.HasElement()) {
         // Set the lights to green whenever we've picked something up
         lighthandler.SetColor(frc::Color::kGreen);
 
@@ -447,32 +481,39 @@ void Robot::TeleopPeriodic() {
     }
     
     const bool bAutoAlign = false;
+    auto cubeGoal = -1;
+
     if(!bAutoAlign) {
         const double dpadValue = auxController.GetPOV();
         // If the aux driver is hitting DPAD Up, drive the arm to the high position
+        // If the driver is hitting it and we don't have an element in the cone intake, shoot out a cube
         if(dpadValue == 0) {
-            shoulderGoal = 29.7_deg;
-            wristGoal = 30.116_deg;
-            if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 10_deg) {
-                armGoal = 0.735_m;
+            if(intakedCube) {
+                cubeGoal = constants::FieldConstants::GridHeights::eUp;
             }
+            else {
+                shoulderGoal = 40_deg;
+                wristGoal = 21_deg;
+                if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 5_deg) {
+                    armGoal = 0.78_m;
+                }
+            }
+        }
+        else if(dpadValue == 90) {
+            shoulderGoal = 165_deg;
+            wristGoal = 61.5_deg;
         }
         // Drive the arm to the mid position when hitting down
         else if(dpadValue == 180) {
-            if(shoulder.GetRotation() < 110_deg) {
-                shoulderGoal = 25_deg;
-                wristGoal = 34.9_deg;
-            
-                if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 25_deg) {
-                    armGoal = 0.1367_m;
-                }
+            if(intakedCube) {
+                cubeGoal = constants::FieldConstants::GridHeights::eMid;
             }
             else {
-                shoulderGoal = 155_deg;
-                wristGoal = 12_deg;
-                
+                shoulderGoal = 38.5_deg;
+                wristGoal = 0_deg;
+            
                 if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 25_deg) {
-                    armGoal = 0.254_m;
+                    armGoal = 0.254_m - 3.5_in;
                 }
             }
         }
@@ -677,23 +718,40 @@ void Robot::TeleopPeriodic() {
     }
 
     frc::SmartDashboard::PutNumber("shoulderOverride", shoulderOverride);
-    // B is the panic button, if we've hit the panic button, move the arm up into the air
-    if(driveController.GetRawButton(constants::XboxButtons::eButtonB)) {
-        shoulderGoal = 90_deg;
-        armGoal = 0_m;
-    }
 
     // Ground Button
     if(auxController.GetXButton()) {
         armGoal = 0_m;
-        shoulderGoal = -18.5_deg;
+        shoulderGoal = -15_deg;
         wristGoal = 70_deg;
     }
-    if(auxController.GetYButton()) {
-        armGoal = 0_m;
-        shoulderGoal = -17.4_deg;
-        wristGoal = -66.593_deg;
+    
+    if(driveController.GetRawButton(constants::XboxButtons::eButtonLB)) {
+        shooter.Shoot(constants::FieldConstants::GridHeights::eIntake);
     }
+    else if(cubeGoal != -1 || auxController.GetRightTriggerAxis() >= 0.25 || auxController.GetLeftBumper()) {
+        if(auxController.GetRightTriggerAxis() >= 0.25) {
+            cubeGoal = constants::FieldConstants::GridHeights::eGround;
+        }
+        else if(auxController.GetLeftBumper()) {
+            cubeGoal = constants::FieldConstants::GridHeights::eGroundSpit;
+        }
+        // Set the shooter to start shooting at the specified height
+        shooter.Shoot((constants::FieldConstants::GridHeights)cubeGoal);
+
+        lighthandler.SetColor(frc::Color::kRed);
+    }
+    else {
+        shooter.Retract();
+    }
+
+    // B is the panic button, if we've hit the panic button, move the arm up into the air
+    // If the intake is deployed, we also want to pull the arm in for panic mode.
+    if(driveController.GetRawButton(constants::XboxButtons::eButtonB) || shooter.IsDeployed()) {
+        shoulderGoal = 90_deg;
+        armGoal = 0_m;
+    }
+
     /*
     // Double Substation
     if(auxController.GetYButton()) {

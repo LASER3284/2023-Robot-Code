@@ -14,12 +14,6 @@ namespace intake {
         public:
             /// @brief The CAN ID for the intake motor
             static constexpr int kIntakeID = 56;
-
-            /// @brief The solenoid port/ID for the intake
-            static constexpr int kIntakeSolenoidID1 = 8;
-
-            /// @brief The solenoid port/ID for the intake mode
-            static constexpr int kIntakeSolenoidID2 = 9;
     };
 
     class Intake {
@@ -71,6 +65,8 @@ namespace intake {
             /// @brief Returns whether or not the intake is currently in cube mode
             /// @return Whether or not the intake is cube mode
             bool IsCubeMode() { return cubeMode; }
+
+            double GetOutput() { return intakeMotor.GetAppliedOutput(); }
         private:
             /// @brief A boolean whether or not the intake has an element
             bool hasElement = false;
@@ -81,9 +77,6 @@ namespace intake {
             /// @brief A reference for the intake NEO 550 object
             rev::CANSparkMax intakeMotor { Constants::kIntakeID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
             rev::SparkMaxRelativeEncoder intakeEncoder = intakeMotor.GetEncoder();
-
-            frc::Solenoid intakeSolenoid1 { frc::PneumaticsModuleType::REVPH, Constants::kIntakeSolenoidID1 };
-            frc::Solenoid intakeSolenoid2 { frc::PneumaticsModuleType::REVPH, Constants::kIntakeSolenoidID2 };
 
             /// @brief A median filter used to measure the current of the NEO 550 to detect current spikes for object detection
             frc::MedianFilter<units::ampere_t> medianFilter = frc::MedianFilter<units::ampere_t>(18);

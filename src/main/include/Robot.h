@@ -22,6 +22,7 @@
 #include "Arm.h"
 #include "Wrist.h"
 #include "Kinematics.h"
+#include "CubeShooter.h"
 #include <deque>
 #include <vector>
 
@@ -70,9 +71,10 @@ class Robot : public frc::TimedRobot {
         /// @brief The subsystem that handles wrist motion/controls
         wrist::Wrist wrist;
 
+        shooter::CubeShooter shooter;
+
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::vector<drive::AutonomousPath> mTrajectoryMap {
-            { "Mid Balance", "MidBalance"},
             { "Mobile", "Mobile"},
             { "Mobile Mid-Cone", "MobileCone"},
             { "Mid Cone Balance", "MidBalance"},
@@ -98,7 +100,11 @@ class Robot : public frc::TimedRobot {
             },
             { 
                 "Mid Cone Cone", "MidConeCone"
-            }
+            },
+            // High Cone Autos
+            { "High Cone Balance", "HighBalance"},
+            
+            // { "Far Mobile High-Cone", "FarMobileHighCone"},
             /*
             { 
                 "Far Mid Cone Cube", "FarConeCube",
@@ -165,4 +171,6 @@ class Robot : public frc::TimedRobot {
         bool bHasAutoBalanced = false;
         bool bHasStartedBalancing = false;
         units::degree_t lastPitch = 0_deg;
+
+        bool intakedCube = false;
 };

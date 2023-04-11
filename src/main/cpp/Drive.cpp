@@ -9,7 +9,7 @@ drive::Drive::Drive(frc::Joystick* controller_in) {
     headingPIDController.EnableContinuousInput(-constants::Pi, constants::Pi);
 
     headingSnapPIDController.EnableContinuousInput(-constants::Pi, constants::Pi);
-    headingSnapPIDController.SetTolerance(units::radian_t(2_deg).value());
+    headingSnapPIDController.SetTolerance(units::radian_t(0.1_deg).value());
 
     frc::SmartDashboard::PutData("headingPIDController", &headingPIDController);
     frc::SmartDashboard::PutData("headingSnapPIDController", &headingSnapPIDController);

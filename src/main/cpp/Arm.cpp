@@ -24,7 +24,7 @@ units::meters_per_second_t arm::Arm::GetVelocity() {
 
 void arm::Arm::SetPositionGoal(units::meter_t distance) {
     if(distance <= 0.03_m) { distance = 0.026_m; }
-    
+
     positionController.SetSetpoint(distance.value());
     extensionGoal = { distance, 0_mps };
 }

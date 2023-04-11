@@ -31,7 +31,7 @@ namespace shoulder {
             static constexpr int kShoulderPortID = 0;
 
             /// @brief The angle offset of the arm where 0_deg is facing forward, horizontally
-            static constexpr units::degree_t kAngleOffset = 107.0_deg;
+            static constexpr units::degree_t kAngleOffset = 144.0_deg;
 
             /// @brief The gear ratio from the main encoder to the final sprocket/arm shaft
             static constexpr double gearRatio = 1 / 261.8182;
@@ -89,12 +89,14 @@ namespace shoulder {
             void RefreshController() { 
                 shoulderSetpoint = { GetRotation(), 0_rad_per_s };
                 shoulderGoal = { GetRotation(), 0_rad_per_s };
+                shoulderTimer.Restart();
             }
 
             void ResetRotation() {
                 manualOffset = 0_deg;
                 manualOffset = (90_deg - GetRotation());
                 RefreshController();
+                shoulderTimer.Restart();
             }
         private:
             /// @brief The main motor for driving the rotation of the shoulder
@@ -119,7 +121,7 @@ namespace shoulder {
             /// @brief The trapezoidal profile constraints for the shoulder rotation
             /// This specifies the max rotational velocity *and* the max rotational acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 40_deg_per_s, 60_deg_per_s_sq };
+            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 40_deg_per_s, 45_deg_per_s_sq };
 
             /// @brief The current goal to rotate the shoulder to
             frc::TrapezoidProfile<units::radians>::State shoulderGoal;
