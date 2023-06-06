@@ -24,6 +24,8 @@ namespace shooter {
 
             static constexpr int kSolenoidChannel = 8;
 
+            static constexpr int kShelfSolenoidChannel = 9;
+
             static constexpr double kIntakeP = 1.2551E-07;
             static constexpr double kIntakeI = 0.0;
             static constexpr double kIntakeD = 0.0;
@@ -40,9 +42,9 @@ namespace shooter {
             static constexpr auto kFlywheelkA = 0.0007214_V / 1.0_rad_per_s_sq;
             static constexpr auto kFlywheelkS = 0.16201_V;
 
-            static constexpr auto kGroundSetpoint = -210_rad_per_s;
-            static constexpr auto kMidSetpoint = -130_rad_per_s;
-            static constexpr auto kHighSetpoint = -360_rad_per_s;
+            static constexpr auto kGroundSetpoint = -240_rad_per_s;
+            static constexpr auto kMidSetpoint = -125_rad_per_s;
+            static constexpr auto kHighSetpoint = -160_rad_per_s;
             static constexpr auto kSpitSetpoint = -420_rad_per_s;
     };
 
@@ -86,7 +88,7 @@ namespace shooter {
             }
 
             bool HasElement() {
-                return (GetFlywheelOutput() > 0.0) && (GetAngularFlywheelVelocity() <= 50000_rad_per_s && GetAngularFlywheelVelocity() > -10000_rad_per_s);
+                return (GetFlywheelOutput() > 0.0) && (GetAngularFlywheelVelocity() <= 50000_rad_per_s && GetAngularFlywheelVelocity() > -10000_rad_per_s) && !isDeployed;
             }
         private:
             rev::CANSparkMax flywheelMotor { Constants::kFlywheelMotorId, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
@@ -98,6 +100,7 @@ namespace shooter {
             rev::SparkMaxRelativeEncoder intakeEnc = intakeMotor.GetEncoder();
 
             frc::Solenoid deploySolenoid { frc::PneumaticsModuleType::REVPH, Constants::kSolenoidChannel };
+            frc::Solenoid shelfSolenoid { frc::PneumaticsModuleType::REVPH, Constants::kShelfSolenoidChannel };
 
             frc2::PIDController flywheelController { 
                 Constants::kFlywheelP,

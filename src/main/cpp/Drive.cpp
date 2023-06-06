@@ -20,7 +20,7 @@ drive::Drive::Drive(frc::Joystick* controller_in) {
     frc::SmartDashboard::PutData("field", &field);
 
     photonPoseEstimator.SetMultiTagFallbackStrategy(photonlib::PoseStrategy::CLOSEST_TO_REFERENCE_POSE);
-    poseEstimator.SetVisionMeasurementStdDevs({4, 4, constants::Pi * 2});
+    poseEstimator.SetVisionMeasurementStdDevs({28.8, 26.2, constants::Pi * 2});
 }
 
 void drive::Drive::SetJoystick(bool state) {
@@ -224,6 +224,9 @@ void drive::Drive::LogEncoders() {
     frc::SmartDashboard::PutNumber("br_turn", backright.getTurnEncPos());
     frc::SmartDashboard::PutNumber("br_drive", backright.GetPosition().distance.value());
 
+    frc::SmartDashboard::PutNumber("fl_vel", frontleft.GetState().speed.value());
+    frc::SmartDashboard::PutNumber("br_vel", backright.GetState().speed.value());
+
     frc::SmartDashboard::PutNumber("gyro_pitch", (double)gyro.GetPitch());
 }
 
@@ -382,23 +385,33 @@ void drive::Drive::UpdateOdometry() {
         const auto estimate = result.value();
         
         double averageAmbiguity = 0;
+        auto averageCameraToTarget = frc::Transform3d();
         int count = 0;
         for(const auto &target : estimate.targetsUsed) {
             averageAmbiguity += target.GetPoseAmbiguity();
+            averageCameraToTarget = averageCameraToTarget + target.GetBestCameraToTarget();
             count += 1;
         }
         averageAmbiguity = averageAmbiguity / count;
-        
+        averageCameraToTarget = averageCameraToTarget / count;
+
+        frc::SmartDashboard::PutNumber("targetCount", count);
+        frc::SmartDashboard::PutNumber("averageAmbiguity", averageAmbiguity);
+        frc::SmartDashboard::PutNumber("averageCameraToTarget_x", averageCameraToTarget.X().value());
+        frc::SmartDashboard::PutNumber("averageCameraToTarget_y", averageCameraToTarget.Y().value());
+
         // Ignore very ambiguous pose estimations in order to avoid jitter at long distances.
-        if(averageAmbiguity <= 0.14) {
-            poseEstimator.AddVisionMeasurement(result.value().estimatedPose.ToPose2d(), result.value().timestamp);
+        if(averageAmbiguity <= 0.05 && (averageCameraToTarget.X() < 1.25_m && averageCameraToTarget.Y() < 1.25_m)) {
+            const auto pose = result.value().estimatedPose.ToPose2d();
+            if(units::math::abs(pose.Rotation().Degrees() - gyro.GetRotation2d().Degrees()) <= 5_deg) {
+                poseEstimator.AddVisionMeasurement(pose, result.value().timestamp);
+            }
         }
 
         pastRobotPose = result.value().estimatedPose;
     }
 
     field.SetRobotPose(poseEstimator.GetEstimatedPosition());
-
 }
 
 void drive::Drive::ForceForward() {

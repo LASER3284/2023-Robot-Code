@@ -23,6 +23,8 @@ void intake::Intake::Tick() {
         holdPower = 0;
     }
 
+    frc::SmartDashboard::PutNumber("flangeLocation", (double)GetFlangeLocation());
+
     hasElement = bHasNewElement;
 }
 

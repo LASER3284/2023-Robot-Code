@@ -53,6 +53,9 @@ class Robot : public frc::TimedRobot {
         /// @brief A string representing the currently selected ""human"" trajectory name
         std::string currentAutonomousState;
 
+        /// @brief An instance of the currently selected auto path
+        drive::AutonomousPath currentAutonomousPath;
+
         /// @brief The subsystem for handling all of the swerve drive train tasks
         drive::Drive drivetrain { &driveController };
 
@@ -76,47 +79,44 @@ class Robot : public frc::TimedRobot {
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::vector<drive::AutonomousPath> mTrajectoryMap {
             { "Mobile", "Mobile"},
-            { "Mobile Mid-Cone", "MobileCone"},
-            { "Mid Cone Balance", "MidBalance"},
-            /*
-            { 
-                "Mid Cone Cube", "ConeCube",
-                { 2.46888_mps, 2.46888_mps },
-                { 0.4_mps_sq, 1_mps_sq }
-            },
-            { 
-                "Mid-Cone Cube Balance", "ConeCubeBalance",
-                { 2.46888_mps, 2.46888_mps },
-                { 0.4_mps_sq, 2.46888_mps_sq }
-            },
-            */ 
+            { "Mobile Mid-Cone", "MobileCone", drive::AutonomousPath::StartingAction::eMidCone  },
+
+            { "Balance", "MidBalance"},
+            { "Mid Cone Balance", "MidBalance", drive::AutonomousPath::StartingAction::eMidCone },
+
             { "Far Mobile", "FarMobile"},
-            { "Far Mobile Mid-Cone", "FarMobileCone"},
-            { "Far Mobile Mid-Cone Balance", "FarMobileConeBalance"},
+            { "Far Mobile Mid-Cone", "FarMobileCone", drive::AutonomousPath::StartingAction::eMidCone },            
             { 
-                "Far Mid Cone Cone", "FarConeCone",
+                "Far Mid Cone Cone", "FarConeCone", drive::AutonomousPath::StartingAction::eMidCone,
                 { 2.46888_mps, 2.46888_mps },
                 { 0.35_mps_sq, 1.25_mps_sq }
             },
             { 
-                "Mid Cone Cone", "MidConeCone"
+                "Mid Cone Cone", "MidConeCone", drive::AutonomousPath::StartingAction::eMidCone,
+                { 2.46888_mps, 2.46888_mps },
+                { 0.5_mps_sq, 1.5_mps_sq }
             },
+
             // High Cone Autos
-            { "High Cone Balance", "HighBalance"},
-            
-            // { "Far Mobile High-Cone", "FarMobileHighCone"},
-            /*
+            { "Mobile High-Cone", "MobileCone", drive::AutonomousPath::StartingAction::eHighCone  },
+            { "High Cone Balance", "MidBalance", drive::AutonomousPath::StartingAction::eHighCone },
             { 
-                "Far Mid Cone Cube", "FarConeCube",
-                { 2.46888_mps, 2.46888_mps },
-                { 0.35_mps_sq, 1.25_mps_sq }
+                "High Cone Cone", "MidConeCone", drive::AutonomousPath::StartingAction::eHighCone,
+                { 3.086_mps, 3.086_mps },
+                { 0.5_mps_sq, 1.25_mps_sq }
+            },
+
+            // Various Cube Autos
+            { 
+                "High Cone Cube Run", "ConeCube", drive::AutonomousPath::StartingAction::eHighCone,
+                { 3.086_mps, 3.47175_mps },
+                { 0.5_mps_sq, 1.75_mps_sq }  
             },
             { 
-                "Far Mid-Cone Cube Balance", "FarMobileConeCubeBalance",
-                { 2.46888_mps, 2.46888_mps },
-                { 0.35_mps_sq, 2_mps_sq }
+                "High Cone Cube Balance", "ConeCubeDock", drive::AutonomousPath::StartingAction::eHighCone,
+                { 3.086_mps, 3.47175_mps },
+                { 0.65_mps_sq, 1.85_mps_sq }  
             },
-            */
         };
 
         /// @brief Whether or not the robot has processed the starting action within auto
@@ -165,6 +165,9 @@ class Robot : public frc::TimedRobot {
 
         /// @brief A timer used for tracking time durations during auto in order to avoid ""race conditions"" in robot actions
         frc::Timer autoTimer;
+
+        /// @brief A timer used for tracking the full auto duration
+        frc::Timer totalAutoTimer;
 
         bool autoTimerRunning = false;
 

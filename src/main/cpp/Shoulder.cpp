@@ -27,6 +27,8 @@ shoulder::Shoulder::Shoulder() {
 
     shoulderGoal = { GetRotation(), 0_deg_per_s };
     shoulderSetpoint = { GetRotation(), 0_deg_per_s };
+
+    shoulderTimer.Restart();
 }
 
 void shoulder::Shoulder::Tick(units::meter_t armExtension) {
@@ -34,21 +36,30 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
     frc::SmartDashboard::PutNumber("shoulder_angle_deg", GetRotation().value());
     frc::SmartDashboard::PutNumber("shoulder_velocity", GetVelocity().value());
 
+    units::volt_t output_voltage = 0_V;
+
     if(bEnabled) {
         if(manualPercentage != 0.0) {
+            output_voltage = manualPercentage * 12_V;
             motor.SetVoltage(manualPercentage * 12_V);
             shoulderGoal = { GetRotation(), 0_deg_per_s };
             shoulderSetpoint = { GetRotation(), 0_deg_per_s };
-            shoulderTimer.Reset();
-            shoulderTimer.Stop();
+            shoulderTimer.Restart();
         }
         else {
-            if(units::math::abs(shoulderGoal.position - GetRotation()) > 1.5_deg) {
-                // Create a motion profile with the given maximum velocity and maximum 
-                // acceleration constraints for the next setpoint, the desired goal, and the
-                // current setpoint.
+            units::degree_t deadzone = 3.5_deg;
+            auto constraints = defaultRotationalConstraints;
+            
+            // We want some slower constraints when the goal is to go towards the bumper (ground)
+            if(shoulderGoal.position <= -5_deg || shoulderGoal.position >= 185_deg) {
+                constraints = slowRotationalConstraints;
+                deadzone = 2.5_deg;
+            }
+            
+            if(units::math::abs(shoulderGoal.position - GetRotation()) > deadzone) {
+                // Create the motion profile with the given maximum velocity and maximum acceleration for the given setpoint
                 frc::TrapezoidProfile<units::radians> rotationalProfile { 
-                    rotationalConstraints, 
+                    constraints, 
                     shoulderGoal,
                     shoulderSetpoint,
                 };
@@ -56,7 +67,7 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
                 shoulderSetpoint = rotationalProfile.Calculate(20_ms);
             }
             else {
-                motor.SetVoltage(0_V);
+                output_voltage = 0_V;
                 shoulderTimer.Start();
                 if(shoulderTimer.HasElapsed(0.125_s)) {
                     shoulderSetpoint = { GetRotation(), 0_deg_per_s };
@@ -69,7 +80,7 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
             frc::SmartDashboard::PutNumber("shoulderGoal_position", units::degree_t(shoulderGoal.position).value());
 
             AdjustFeedforward(
-                kinematics::Kinematics::CalculateShoulderFeedforward(armExtension, GetRotation(), shoulderSetpoint.velocity)
+                kinematics::Kinematics::CalculateShoulderFeedforward(armExtension, shoulderSetpoint.position, shoulderSetpoint.velocity)
             );
 
             const auto control_effort_v = angleController.Calculate(
@@ -80,9 +91,17 @@ void shoulder::Shoulder::Tick(units::meter_t armExtension) {
             frc::SmartDashboard::PutNumber("shoulder_effort_v", control_effort_v);
             frc::SmartDashboard::PutNumber("shoulder_measurement", units::radian_t(GetRotation()).value());
             frc::SmartDashboard::PutNumber("shoulder_setpoint", shoulderSetpoint.position.value());
+            frc::SmartDashboard::PutNumber("shoulder_ff", feedforward.value());
 
-            motor.SetVoltage(feedforward);
+            output_voltage = feedforward;
+
         }
+        
+        if((GetRotation() <= -21.2_deg && output_voltage < 0_V) || (GetRotation() >= 200_deg && output_voltage > 0_V)) {
+            output_voltage = 0_V;
+        }
+        
+        motor.SetVoltage(output_voltage);
     }
     else {
         shoulderTimer.Restart();

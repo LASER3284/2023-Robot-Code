@@ -3,12 +3,12 @@
     {
       "anchorPoint": {
         "x": 1.8869415516608812,
-        "y": 4.853146458429669
+        "y": 5.01
       },
       "prevControl": null,
       "nextControl": {
         "x": 2.8869415516608807,
-        "y": 4.853146458429669
+        "y": 5.01
       },
       "holonomicAngle": 0,
       "isReversal": false,
@@ -24,16 +24,16 @@
     },
     {
       "anchorPoint": {
-        "x": 7.25,
-        "y": 4.624763095680038
+        "x": 6.95,
+        "y": 4.598497722171765
       },
       "prevControl": {
-        "x": 4.2392901879820855,
-        "y": 4.933080635392041
+        "x": 3.9392901879820856,
+        "y": 4.906815261883768
       },
       "nextControl": {
-        "x": 4.2392901879820855,
-        "y": 4.933080635392041
+        "x": 3.9392901879820856,
+        "y": 4.906815261883768
       },
       "holonomicAngle": 0,
       "isReversal": true,
@@ -49,12 +49,62 @@
     },
     {
       "anchorPoint": {
-        "x": 1.89,
-        "y": 3.65
+        "x": 2.1929752577453865,
+        "y": 4.848578791174676
       },
       "prevControl": {
+        "x": 2.623953954436697,
+        "y": 4.848578791174676
+      },
+      "nextControl": {
+        "x": 1.924796088201692,
+        "y": 4.848578791174676
+      },
+      "holonomicAngle": 0,
+      "isReversal": false,
+      "velOverride": null,
+      "isLocked": false,
+      "isStopPoint": false,
+      "stopEvent": {
+        "names": [],
+        "executionBehavior": "parallel",
+        "waitBehavior": "none",
+        "waitTime": 0
+      }
+    },
+    {
+      "anchorPoint": {
         "x": 1.89,
-        "y": 5.081533088346854
+        "y": 3.7582483316908446
+      },
+      "prevControl": {
+        "x": 1.9274258420439818,
+        "y": 4.96203486019479
+      },
+      "nextControl": {
+        "x": 1.9274258420439818,
+        "y": 4.96203486019479
+      },
+      "holonomicAngle": 0,
+      "isReversal": true,
+      "velOverride": null,
+      "isLocked": false,
+      "isStopPoint": true,
+      "stopEvent": {
+        "names": [],
+        "executionBehavior": "parallel",
+        "waitBehavior": "none",
+        "waitTime": 0
+      }
+    },
+    {
+      "anchorPoint": {
+        "x": 6.9570522047027,
+        "y": 5.641069059915899
+      },
+      "prevControl": {
+        "x": 3.3107816859586108,
+        "y": 5.1617446827317615
       },
       "nextControl": null,
       "holonomicAngle": 0,
@@ -70,5 +120,8 @@
       }
     }
   ],
+  "maxVelocity": 2.46,
+  "maxAcceleration": 1.0,
+  "isReversed": null,
   "markers": []
 }

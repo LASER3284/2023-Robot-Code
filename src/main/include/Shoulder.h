@@ -31,10 +31,12 @@ namespace shoulder {
             static constexpr int kShoulderPortID = 0;
 
             /// @brief The angle offset of the arm where 0_deg is facing forward, horizontally
-            static constexpr units::degree_t kAngleOffset = 144.0_deg;
+            static constexpr units::degree_t kAngleOffset = 113.0_deg;
 
             /// @brief The gear ratio from the main encoder to the final sprocket/arm shaft
             static constexpr double gearRatio = 1 / 261.8182;
+
+            // Additionally: 837.8182
 
             /// @brief The maximum achievable rotation of the arm
             static constexpr units::degree_t maxRotation = 272.1_deg;
@@ -121,7 +123,10 @@ namespace shoulder {
             /// @brief The trapezoidal profile constraints for the shoulder rotation
             /// This specifies the max rotational velocity *and* the max rotational acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::radians>::Constraints rotationalConstraints { 40_deg_per_s, 45_deg_per_s_sq };
+            frc::TrapezoidProfile<units::radians>::Constraints defaultRotationalConstraints { 40_deg_per_s, 35_deg_per_s_sq };
+
+            /// @brief The constraints for a profile thats going towards the bumper (ground)
+            frc::TrapezoidProfile<units::radians>::Constraints slowRotationalConstraints { 35_deg_per_s, 30_deg_per_s_sq };
 
             /// @brief The current goal to rotate the shoulder to
             frc::TrapezoidProfile<units::radians>::State shoulderGoal;
