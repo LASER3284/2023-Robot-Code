@@ -104,12 +104,7 @@ void Robot::RobotPeriodic() {
         }
     }
 
-    frc::SmartDashboard::PutNumber("angularFlywheelVelocity", shooter.GetAngularFlywheelVelocity().value());
-    frc::SmartDashboard::PutNumber("angularIntakeVelocity", shooter.GetAngularIntakeVelocity().value());
-    frc::SmartDashboard::PutNumber("flywheelOutput", shooter.GetFlywheelOutput());
-    frc::SmartDashboard::PutNumber("intakeOutput", shooter.GetIntakeOutput());
-    frc::SmartDashboard::PutNumber("flywheelCurrent", shooter.GetFlywheelCurrent().value());
-    frc::SmartDashboard::PutBoolean("shooterHasElement", shooter.HasElement());
+    frc::SmartDashboard::PutBoolean("cubertHasElement", cubert.HasElement());
 }
 
 void Robot::AutonomousInit() {
@@ -548,7 +543,7 @@ void Robot::TeleopPeriodic() {
         intake.Spit();
         intakedCube = false;
     }
-    else if(intake.HasElement() || shooter.HasElement()) {
+    else if(intake.HasElement() || cubert.HasElement()) {
         // Set the lights to green whenever we've picked something up
         lighthandler.SetColor(frc::Color::kGreen);
 
@@ -830,7 +825,7 @@ void Robot::TeleopPeriodic() {
     }
     
     if(driveController.GetRawButton(constants::XboxButtons::eButtonLB)) {
-        shooter.Shoot(constants::FieldConstants::GridHeights::eIntake);
+        cubert.Shoot(constants::FieldConstants::GridHeights::eIntake);
         intakedCube = true;
     }
     else if(cubeGoal != -1 || auxController.GetRightTriggerAxis() >= 0.25 || auxController.GetLeftBumper()) {
@@ -840,18 +835,18 @@ void Robot::TeleopPeriodic() {
         else if(auxController.GetLeftBumper()) {
             cubeGoal = constants::FieldConstants::GridHeights::eGroundSpit;
         }
-        // Set the shooter to start shooting at the specified height
-        shooter.Shoot((constants::FieldConstants::GridHeights)cubeGoal);
+        // Set the cubert to start shooting at the specified height
+        cubert.Shoot((constants::FieldConstants::GridHeights)cubeGoal);
 
         lighthandler.SetColor(frc::Color::kRed);
     }
     else {
-        shooter.Retract();
+        cubert.Retract();
     }
 
     // B is the panic button, if we've hit the panic button, move the arm up into the air
     // If the intake is deployed, we also want to pull the arm in for panic mode.
-    if(driveController.GetRawButton(constants::XboxButtons::eButtonB) || shooter.IsDeployed()) {
+    if(driveController.GetRawButton(constants::XboxButtons::eButtonB) || cubert.IsDeployed()) {
         shoulderGoal = 90_deg;
         armGoal = 0_m;
     }

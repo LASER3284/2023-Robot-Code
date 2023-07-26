@@ -13,6 +13,7 @@
 #include <frc/trajectory/TrapezoidProfile.h>
 #include <frc/XboxController.h>
 
+#include "Cubert.h"
 #include "FieldConstants.h"
 #include "SwerveModule.h"
 #include "Drive.h"
@@ -22,7 +23,6 @@
 #include "Arm.h"
 #include "Wrist.h"
 #include "Kinematics.h"
-#include "CubeShooter.h"
 #include <deque>
 #include <vector>
 
@@ -74,7 +74,7 @@ class Robot : public frc::TimedRobot {
         /// @brief The subsystem that handles wrist motion/controls
         wrist::Wrist wrist;
 
-        shooter::CubeShooter shooter;
+        shooter::Cubert cubert;
 
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::vector<drive::AutonomousPath> mTrajectoryMap {
