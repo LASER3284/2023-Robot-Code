@@ -1,8 +1,11 @@
 #pragma once
 
 #include "FieldConstants.h"
+#include "frc/trajectory/TrapezoidProfile.h"
+#include <units/velocity.h>
 #include <memory>
 #include <units/angular_velocity.h>
+#include <units/angular_acceleration.h>
 #include <map>
 #include <units/angle.h>
 #include <units/voltage.h>
@@ -10,6 +13,7 @@
 #include <frc/DutyCycleEncoder.h>
 #include <frc/controller/PIDController.h>
 #include <ctre/phoenix/motorcontrol/can/WPI_TalonFX.h>
+#include <frc/controller/SimpleMotorFeedforward.h>
 
 namespace shooter {
     namespace constants {
@@ -31,6 +35,20 @@ namespace shooter {
         /// @brief Derivative Gain for the deploy controller
         constexpr double kDeployD = 0.0084273;
         
+        /// @brief The statically applied voltage.
+        constexpr auto kDeployKs = 0.21995_V;
+        /// @brief The voltage applied per velocity unit.
+        constexpr auto kDeployKv = 0.009124_V / 1_deg_per_s;
+        /// @brief The voltage applied per acceleration unit.
+        constexpr auto kDeployKa = 0.00033642_V / 1_deg_per_s_sq;
+
+        /// @brief The statically applied voltage.
+        constexpr auto kRollerKs = 0.0_V;
+        /// @brief The voltage applied per velocity unit.
+        constexpr auto kRollerKv = 0.0_V / 1_deg_per_s;
+        /// @brief The voltage applied per acceleration unit.
+        constexpr auto kRollerKa = 0.0_V / 1_deg_per_s_sq;
+
         /// @brief Proportional Gain for the roller controller
         constexpr double kRollerP = 0.0;
         /// @brief Integral Gain for the roller controller
@@ -41,7 +59,8 @@ namespace shooter {
         /// @brief Roller speed in RPM
         constexpr units::revolutions_per_minute_t kRollerSetpoint = 9000.0_rpm;
         /// @brief Roller intake speed in RPM
-        constexpr units::revolutions_per_minute_t kRollerIntakeSetpoint = -kRollerSetpoint / 2;
+        /// @todo Verify speeds are valid.
+        constexpr units::revolutions_per_minute_t kRollerIntakeSetpoint = -378_rpm;
 
         constexpr units::degree_t kUpperLimit = 103.6_deg;
         constexpr units::degree_t kLowerLimit = 222.3_deg;
@@ -106,6 +125,12 @@ namespace shooter {
             /// @param volts The voltage to apply.
             void _set_deploy(units::volt_t volts);
 
+            void _set_deploy_goal(units::degree_t angle);
+
+            units::revolutions_per_minute_t _get_roller_avel();
+
+            units::feet_per_second_t _get_roller_lvel();
+
             /// @brief The motor that deploys the Cubert
             rev::CANSparkMax deployMotor {
                 constants::kDeployNeo,
@@ -121,6 +146,21 @@ namespace shooter {
                 constants::kDeployI,
                 constants::kDeployD
             };
+
+            frc::SimpleMotorFeedforward<units::degrees> deployFF {
+                constants::kDeployKs,
+                constants::kDeployKv,
+                constants::kDeployKa
+            };
+
+            frc::TrapezoidProfile<units::degrees>::Constraints deployConstraints {
+                240_deg_per_s,
+                120_deg_per_s_sq
+            };
+
+            frc::TrapezoidProfile<units::degrees>::State deployGoal;
+
+            frc::TrapezoidProfile<units::degrees>::State deploySetpoint;
 
             /// @brief The downie Falcon 500 as std::unique_ptr
             std::unique_ptr<
