@@ -841,7 +841,7 @@ void Robot::TeleopPeriodic() {
         lighthandler.SetColor(frc::Color::kRed);
     }
     else {
-        cubert.Retract();
+        cubert.Shoot(constants::FieldConstants::GridHeights::eStopped);
     }
 
     // B is the panic button, if we've hit the panic button, move the arm up into the air

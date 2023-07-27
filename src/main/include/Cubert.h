@@ -14,21 +14,37 @@
 namespace shooter {
     namespace constants {
         /// @brief Top Cubert Falcon
-        constexpr int kUppie = 999;
+        constexpr int kUppie = 44;
         /// @brief Bottom Cubert Falcon
-        constexpr int kDownie = 998;
+        constexpr int kDownie = 45;
         /// @brief Deploying NEO
-        constexpr int kDeployNeo = 997;
+        constexpr int kDeployNeo = 46;
 
-        /// @brief Angle offset for thru-bore
+        /// @brief Angle offset for thru-bore (this is subtracted from the
+        /// reported angle).
         constexpr units::degree_t kThruBoreAngleOffset = 0.0_deg;
 
         /// @brief Proportional Gain for the deploy controller
-        constexpr double kDeployP = 0.0;
+        constexpr double kDeployP = 0.099122;
         /// @brief Integral Gain for the deploy controller
         constexpr double kDeployI = 0.0;
         /// @brief Derivative Gain for the deploy controller
-        constexpr double kDeployD = 0.0;
+        constexpr double kDeployD = 0.0084273;
+        
+        /// @brief Proportional Gain for the roller controller
+        constexpr double kRollerP = 0.0;
+        /// @brief Integral Gain for the roller controller
+        constexpr double kRollerI = 0.0;
+        /// @brief Derivative Gain for the roller controller
+        constexpr double kRollerD = 0.0;
+
+        /// @brief Roller speed in RPM
+        constexpr units::revolutions_per_minute_t kRollerSetpoint = 9000.0_rpm;
+        /// @brief Roller intake speed in RPM
+        constexpr units::revolutions_per_minute_t kRollerIntakeSetpoint = -kRollerSetpoint / 2;
+
+        constexpr units::degree_t kUpperLimit = 103.6_deg;
+        constexpr units::degree_t kLowerLimit = 222.3_deg;
 
         /// @brief This is a map of GridHeights to degree values for where the
         /// Cubert should position itself.
@@ -36,32 +52,31 @@ namespace shooter {
             ::constants::FieldConstants::GridHeights,
             units::degree_t
         > kAngleGridMap = {
-            { ::constants::FieldConstants::GridHeights::eUp, 90.0_deg },
-            { ::constants::FieldConstants::GridHeights::eMid, 45.0_deg },
-            { ::constants::FieldConstants::GridHeights::eStopped, 100_deg },
+            { ::constants::FieldConstants::GridHeights::eUp, kUpperLimit },
+            { ::constants::FieldConstants::GridHeights::eMid, kUpperLimit },
+            { ::constants::FieldConstants::GridHeights::eGround, kLowerLimit },
+            { ::constants::FieldConstants::GridHeights::eIntake, kLowerLimit },
+            { ::constants::FieldConstants::GridHeights::eGroundSpit, kLowerLimit },
+            { ::constants::FieldConstants::GridHeights::eStopped, kUpperLimit },
         };
+
+        constexpr double kRollerRatio = 2.0 / 3.0;
     }
 
     class Cubert {
         public:
+            /// @brief Initializes the motors and ensures break mode on the NEO.
+            void Init();
+
             /// @brief Updates SmartDashboard values; should be called in
             /// RobotPeriodic().
             void Tick();
-
-            /// @brief Deploy the intake motors such that we intake a cube.
-            /// @param intake A boolean value saying whether to spin the intake
-            /// motor.
-            void Deploy(bool intake);
 
             /// @brief Returns whether the cubert was last deployed or retracted.
             /// @return True if deployed, false otherwise.
             bool IsDeployed() {
                 return isDeployed;
             }
-
-            /// @brief Retract the intake and stop the motors unless we're
-            /// shooting.
-            void Retract();
 
             /// @todo Actually implement
             /// @brief Returns whether the shooter has obtained a game element.
@@ -107,19 +122,25 @@ namespace shooter {
                 constants::kDeployD
             };
 
-            /// @brief The downie Falcon 500
+            /// @brief The downie Falcon 500 as std::unique_ptr
             std::unique_ptr<
                 ctre::phoenix::motorcontrol::can::WPI_TalonFX
             > downieMotor = std::unique_ptr<
                 ctre::phoenix::motorcontrol::can::WPI_TalonFX
             >(new ctre::phoenix::motorcontrol::can::WPI_TalonFX(constants::kDownie));
 
-            /// @brief The uppie Falcon 500
+            /// @brief The uppie Falcon 500 as std::unique_ptr
             std::unique_ptr<
                 ctre::phoenix::motorcontrol::can::WPI_TalonFX
             > uppieMotor = std::unique_ptr<
                 ctre::phoenix::motorcontrol::can::WPI_TalonFX
             >(new ctre::phoenix::motorcontrol::can::WPI_TalonFX(constants::kUppie));
+
+            frc2::PIDController rollerController {
+                constants::kRollerP,
+                constants::kRollerI,
+                constants::kRollerD
+            };
 
             /// @brief Is the intake deployed?
             bool isDeployed = false;
