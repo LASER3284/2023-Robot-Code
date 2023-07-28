@@ -125,10 +125,19 @@ namespace shooter {
             /// @param volts The voltage to apply.
             void _set_deploy(units::volt_t volts);
 
+            /// @brief Has the side effect of setting the deploySetpoint and
+            /// deployGoal to the specified position.
+            /// @param angle The desired position.
+            /// @warning Bounds checking is not done for this function! Be
+            /// cautious of its side effects.
             void _set_deploy_goal(units::degree_t angle);
 
+            /// @brief Gets the rollers' angular velocity.
+            /// @return Roller angular velocity in RPM.
             units::revolutions_per_minute_t _get_roller_avel();
 
+            /// @brief Gets the rollers' surface velocity.
+            /// @return Roller surface velocity in ft/s.
             units::feet_per_second_t _get_roller_lvel();
 
             /// @brief The motor that deploys the Cubert
