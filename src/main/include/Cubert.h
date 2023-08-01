@@ -1,7 +1,7 @@
 #pragma once
 
 #include "FieldConstants.h"
-#include "frc/trajectory/TrapezoidProfile.h"
+#include <frc/trajectory/TrapezoidProfile.h>
 #include <units/velocity.h>
 #include <memory>
 #include <units/angular_velocity.h>
@@ -43,18 +43,18 @@ namespace shooter {
         constexpr auto kDeployKa = 0.00033642_V / 1_deg_per_s_sq;
 
         /// @brief The statically applied voltage.
-        constexpr auto kRollerKs = 0.0_V;
+        constexpr auto kRollerKs = 0.24554_V;
         /// @brief The voltage applied per velocity unit.
-        constexpr auto kRollerKv = 0.0_V / 1_deg_per_s;
+        constexpr auto kRollerKv = 6.0142E-05_V / 1_deg_per_s;
         /// @brief The voltage applied per acceleration unit.
-        constexpr auto kRollerKa = 0.0_V / 1_deg_per_s_sq;
+        constexpr auto kRollerKa = 1.3203E-06_V / 1_deg_per_s_sq;
 
         /// @brief Proportional Gain for the roller controller
-        constexpr double kRollerP = 0.0;
+        constexpr double kRollerP = 0.0087484;
         /// @brief Integral Gain for the roller controller
         constexpr double kRollerI = 0.0;
         /// @brief Derivative Gain for the roller controller
-        constexpr double kRollerD = 0.0;
+        constexpr double kRollerD = 0.00011483;
 
         /// @brief Roller speed in RPM
         constexpr units::revolutions_per_minute_t kRollerSetpoint = 9000.0_rpm;
@@ -63,6 +63,7 @@ namespace shooter {
         constexpr units::revolutions_per_minute_t kRollerIntakeSetpoint = -378_rpm;
 
         constexpr units::degree_t kUpperLimit = 103.6_deg;
+        constexpr units::degree_t kShootingPos = 118.0_deg;
         constexpr units::degree_t kLowerLimit = 222.3_deg;
 
         /// @brief This is a map of GridHeights to degree values for where the
@@ -71,8 +72,8 @@ namespace shooter {
             ::constants::FieldConstants::GridHeights,
             units::degree_t
         > kAngleGridMap = {
-            { ::constants::FieldConstants::GridHeights::eUp, kUpperLimit },
-            { ::constants::FieldConstants::GridHeights::eMid, kUpperLimit },
+            { ::constants::FieldConstants::GridHeights::eUp, kShootingPos },
+            { ::constants::FieldConstants::GridHeights::eMid, kShootingPos },
             { ::constants::FieldConstants::GridHeights::eGround, kLowerLimit },
             { ::constants::FieldConstants::GridHeights::eIntake, kLowerLimit },
             { ::constants::FieldConstants::GridHeights::eGroundSpit, kLowerLimit },
@@ -101,7 +102,7 @@ namespace shooter {
             /// @brief Returns whether the shooter has obtained a game element.
             /// @return false for now.
             bool HasElement() {
-                return false;
+                return true;
             }
 
             /// @brief Shoot the cube for a specific height.

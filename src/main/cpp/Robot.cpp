@@ -33,6 +33,8 @@ void Robot::RobotInit() {
     arm.SetPositionGoal(arm.GetPosition());
 
     frc::SmartDashboard::PutBoolean("intakeFlipping", true);
+
+    cubert.Init();
 }
 
 /**
@@ -105,6 +107,8 @@ void Robot::RobotPeriodic() {
     }
 
     frc::SmartDashboard::PutBoolean("cubertHasElement", cubert.HasElement());
+
+    cubert.Tick();
 }
 
 void Robot::AutonomousInit() {

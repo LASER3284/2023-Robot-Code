@@ -8,6 +8,7 @@ using namespace ::constants;
 
 void shooter::Cubert::Init() {
     deployMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
+    deployMotor.SetInverted(true);
 }
 
 void shooter::Cubert::Tick() {
@@ -33,7 +34,7 @@ void shooter::Cubert::Shoot(FieldConstants::GridHeights height) {
     );
 
     if (height == FieldConstants::GridHeights::eStopped)
-        _stop_rollers();
+        _set_rollers(-0.85_V);
     else {
         if (height != FieldConstants::GridHeights::eIntake) {
             _set_rollers(
