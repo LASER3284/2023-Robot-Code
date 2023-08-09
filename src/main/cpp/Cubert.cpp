@@ -1,6 +1,7 @@
 #include "Cubert.h"
 #include "FieldConstants.h"
 #include "Constants.h"
+#include <ctime>
 #include <units/length.h>
 #include <frc/smartdashboard/SmartDashboard.h>
 
@@ -9,6 +10,7 @@ using namespace ::constants;
 void shooter::Cubert::Init() {
     deployMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
     deployMotor.SetInverted(true);
+    timekeeper.Start();
 }
 
 void shooter::Cubert::Tick() {
@@ -19,32 +21,38 @@ void shooter::Cubert::Tick() {
 }
 
 void shooter::Cubert::Shoot(FieldConstants::GridHeights height) {
+    if (start_shoot == 0_s)
+        start_shoot = timekeeper.Get();
+
     _set_deploy_goal(constants::kAngleGridMap.at(height));
 
-    frc::TrapezoidProfile<units::degrees> deprofile {
+    frc::TrapezoidProfile<units::degrees> deploy_profile {
         deployConstraints,
         deployGoal,
         deploySetpoint
     };
 
-    deploySetpoint = deprofile.Calculate(20_ms);
+    deploySetpoint = deploy_profile.Calculate(20_ms);
     _set_deploy(
         units::volt_t { deployController.Calculate(GetAngle().value(), deploySetpoint.position.value()) }
         + deployFF.Calculate(deploySetpoint.velocity)
     );
 
-    if (height == FieldConstants::GridHeights::eStopped)
-        _set_rollers(-0.85_V);
-    else {
+    if (height == FieldConstants::GridHeights::eStopped) {
+        start_shoot = 0_s;
+        _set_rollers(-0.75_V);
+    } else {
         if (height != FieldConstants::GridHeights::eIntake) {
-            _set_rollers(
-                units::volt_t {
-                    rollerController.Calculate(
-                        _get_roller_avel().value(),
-                        constants::kRollerSetpoint.value()
-                    )
-                }
-            );
+            if (start_shoot - timekeeper.Get() >= constants::kRollerDelay) {
+                _set_rollers(
+                    units::volt_t {
+                        rollerController.Calculate(
+                            _get_roller_avel().value(),
+                            constants::kRollerSetpoint.value()
+                        )
+                    } + constants::kRollerKs
+                );
+            }
         } else {
             _set_rollers(
                 units::volt_t {

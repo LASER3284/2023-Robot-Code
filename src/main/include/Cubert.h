@@ -8,12 +8,14 @@
 #include <units/angular_acceleration.h>
 #include <map>
 #include <units/angle.h>
+#include <units/time.h>
 #include <units/voltage.h>
 #include <rev/CANSparkMax.h>
 #include <frc/DutyCycleEncoder.h>
 #include <frc/controller/PIDController.h>
 #include <ctre/phoenix/motorcontrol/can/WPI_TalonFX.h>
 #include <frc/controller/SimpleMotorFeedforward.h>
+#include <frc/Timer.h>
 
 namespace shooter {
     namespace constants {
@@ -81,6 +83,8 @@ namespace shooter {
         };
 
         constexpr double kRollerRatio = 2.0 / 3.0;
+
+        constexpr units::second_t kRollerDelay = 100_ms;
     }
 
     class Cubert {
@@ -194,5 +198,8 @@ namespace shooter {
 
             /// @brief Is the intake deployed?
             bool isDeployed = false;
+
+            frc::Timer timekeeper {};
+            units::second_t start_shoot = 0_s;
     };
 }
