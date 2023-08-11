@@ -89,7 +89,7 @@ void Robot::RobotPeriodic() {
     bool intakeFlipping = frc::SmartDashboard::GetBoolean("intakeFlipping", true);
     if(intakeFlipping) {
         if(shoulder.GetRotation() >= 135_deg) {
-            if(wrist.GetRotation() > 45_deg) {
+            if(wrist.GetRotation() > 100_deg) {
                 intake.FlipDirection(true);
             }
             else {
@@ -97,7 +97,7 @@ void Robot::RobotPeriodic() {
             }
         }
         else {
-            if(wrist.GetRotation() < -45_deg) {
+            if(wrist.GetRotation() < -100_deg) {
                 intake.FlipDirection(false);
             }
             else {
@@ -615,9 +615,10 @@ void Robot::TeleopPeriodic() {
             // Change the wrist angle based on the flange location so that way we can help passively hold the cone better
             switch (intake.GetFlangeLocation())
             {
-                case intake::FlangeLocation::eBackwards:
-                    wristGoal = -67_deg;
-                    break;
+                // NOT NEEDED B/C WE USE ONLY ONE SIDE FOR INTAKE
+                //case intake::FlangeLocation::eBackwards:
+                //    wristGoal = -67_deg;
+                //    break;
                 default:
                     wristGoal = 90_deg;
                     break;

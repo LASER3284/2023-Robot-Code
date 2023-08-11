@@ -21,6 +21,6 @@
 * Emma Weiss
 
 ## TODO
-* Verify new Cubert can reach all grid positions
-* SysId the Cubert rollers as flywheel
-* Add FeedForwards for both Cubert parts
+* Fix Wrist movement (SysId?)
+* Test Cubert `HasElement` implement for consistency
+* Make sure Wrist-Intake direction is correct

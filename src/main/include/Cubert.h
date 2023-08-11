@@ -85,6 +85,7 @@ namespace shooter {
         constexpr double kRollerRatio = 2.0 / 3.0;
 
         constexpr units::second_t kRollerDelay = 100_ms;
+        constexpr units::revolutions_per_minute_t kRollerDeadband = 20_rpm;
     }
 
     class Cubert {
@@ -102,11 +103,11 @@ namespace shooter {
                 return isDeployed;
             }
 
-            /// @todo Actually implement
+            /// @todo Test implement.
             /// @brief Returns whether the shooter has obtained a game element.
             /// @return false for now.
             bool HasElement() {
-                return true;
+                return abs(_get_roller_avel().value()) < constants::kRollerDeadband.value();
             }
 
             /// @brief Shoot the cube for a specific height.

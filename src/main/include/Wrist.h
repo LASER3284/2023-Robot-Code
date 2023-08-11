@@ -20,14 +20,14 @@ namespace wrist {
             static constexpr int kWristMotorID = 60;
 
             /// @brief The gear ratio from the NEO 550 to the output of the wrist.
-            static constexpr double kWristGearRatio = 90.0 * (70.0 / 48.0);
+            static constexpr double kWristGearRatio = 90.0 * (66.0 / 45.0);
 
-            /// @brief The starting angle for the wrist
-            static constexpr units::degree_t kStartingAngle = 98_deg;
+            /// @brief The starting angle for the wrist.
+            static constexpr units::degree_t kStartingAngle = 95_deg;
 
-            static constexpr units::volt_t kS = 0.13643_V;
-            static constexpr units::volt_t kG = 0.1052_V;
-            static constexpr auto kV = 1.2617_V / 1_rad_per_s;
+            static constexpr units::volt_t kS = 0.16856_V;
+            static constexpr units::volt_t kG = 0.032344_V;
+            static constexpr auto kV = 0.02252_V / 1_deg_per_s;
             static constexpr units::degree_t kMaxAngle = 185_deg;
     };
 
@@ -71,9 +71,9 @@ namespace wrist {
             rev::SparkMaxRelativeEncoder wristEncoder = wristMotor.GetEncoder();
 
             frc2::PIDController controller {
-                5.9051,    // kP
+                0.13129,    // kP
                 0.0,    // kI
-                1.0358    // kD
+                0.012726    // kD
             };
 
             double manualPercentage = 0.0;

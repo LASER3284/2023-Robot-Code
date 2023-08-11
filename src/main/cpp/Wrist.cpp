@@ -3,7 +3,7 @@
 wrist::Wrist::Wrist() {
     wristMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
     wristMotor.SetSmartCurrentLimit(25);
-    wristMotor.SetInverted(true);
+    wristMotor.SetInverted(false);
     wristEncoder.SetPosition(0);
     SetRotationGoal(GetRotation());
     wristTimer.Restart();
@@ -16,10 +16,16 @@ void wrist::Wrist::Tick(units::degree_t shoulderRotation) {
     frc::SmartDashboard::PutNumber("wristTimer_s", wristTimer.Get().value());
 
     if(manualPercentage != 0) {
+        // If the rotation is within the allowed range OR the intake is trying
+        // to get back within the range, allow voltage, else don't
+        if (abs(GetRotation().value()) <= 100 || manualPercentage * (GetRotation().value() >= 0 ? 1 : -1) < 0) {
         wristMotor.SetVoltage((manualPercentage * 12_V));
         wristTimer.Restart();
         wristGoal = { GetRotation(), 0_deg_per_s };
         wristSetpoint = { GetRotation(), 0_deg_per_s };
+        } else {
+            wristMotor.SetVoltage(0_V);
+        }
     }
     else {
         // Since the movements on the end of the wrist are amplified by the shoulder, we really don't care too much about
@@ -43,7 +49,12 @@ void wrist::Wrist::Tick(units::degree_t shoulderRotation) {
 
         units::volt_t ff = (Constants::kS * wpi::sgn(wristSetpoint.velocity)) + (Constants::kG * units::math::cos(shoulderRotation)) + ((Constants::kV * wristSetpoint.velocity));
         frc::SmartDashboard::PutNumber("wrist_ff_v", ff.value());
-        wristMotor.SetVoltage(ff + units::volt_t(controller.Calculate(units::radian_t(GetRotation()).value(), wristGoal.position.value())));
+        frc::SmartDashboard::PutNumber("wrist_pid_v", controller.Calculate(units::radian_t(GetRotation()).value(), wristGoal.position.value()));
+        const auto voltage = ff + units::volt_t(controller.Calculate(units::radian_t(GetRotation()).value(), wristGoal.position.value()));
+        if (abs(GetRotation().value()) <= 100 || voltage.value() * (GetRotation().value() >= 0 ? 1 : -1) < 0 )
+            wristMotor.SetVoltage(voltage);
+        else
+            wristMotor.SetVoltage(0_V);
     }
 }
 
