@@ -51,9 +51,9 @@ namespace drive {
 
             frc2::PIDController drivePIDController { 0.72837, 0.0, 0.0};
             frc2::PIDController turnPIDController {
-                0.010, // P: 0.011
+                0.0095, // P: 0.011
                 0.000, // I: 0.000
-                0.000, // D: 0.000
+                0.0, // D: 0.000
             };
 
             frc::SimpleMotorFeedforward<units::meters> driveFeedforward { 

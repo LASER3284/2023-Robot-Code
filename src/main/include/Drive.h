@@ -44,11 +44,11 @@ namespace drive {
             static constexpr units::meters_per_second_t  maxTranslationalVelocity = 4.14528_mps;
             static constexpr units::radians_per_second_t maxRotationalVelocity = 700_deg_per_s;
 
-            static constexpr double kTrajectoryX_P = 1.0;
+            static constexpr double kTrajectoryX_P = 1.005;
             static constexpr double kTrajectoryX_I = 0.0;
             static constexpr double kTrajectoryX_D = 0.0;
 
-            static constexpr double kTrajectoryY_P = 3.5;
+            static constexpr double kTrajectoryY_P = 3.505;
             static constexpr double kTrajectoryY_I = 0.0;
             static constexpr double kTrajectoryY_D = 0.0;
 

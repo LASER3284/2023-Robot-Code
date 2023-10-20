@@ -66,9 +66,8 @@ namespace intake {
 
             /// @brief Returns true based on the median current of the intake motor
             /// @return Whether or not the intake current has an element in it
-            bool HasElement() { 
-                return false;
-                //return hasElement; 
+            bool HasElement() {
+                return hasElement; 
             }
 
             /// @brief Returns whether or not the intake is currently in cube mode

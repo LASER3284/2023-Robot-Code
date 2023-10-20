@@ -397,8 +397,8 @@ PathPlannerTrajectory::PathPlannerState PathPlannerTrajectory::transformStateFor
 		PathPlannerTrajectory::PathPlannerState transformedState;
 
 		frc::Translation2d transformedTranslation(651.25_in - state.pose.X(), state.pose.Y());
-		frc::Rotation2d transformedHeading = state.pose.Rotation() + frc::Rotation2d(180_deg);
-		frc::Rotation2d transformedHolonomicRotation = state.holonomicRotation + frc::Rotation2d(180_deg);
+		frc::Rotation2d transformedHeading =  (frc::Rotation2d(180_deg) - state.pose.Rotation()).Degrees() > 180_deg ? frc::Rotation2d(-180_deg) - state.pose.Rotation() : frc::Rotation2d(180_deg) - state.pose.Rotation();
+		frc::Rotation2d transformedHolonomicRotation = (frc::Rotation2d(180_deg) - state.holonomicRotation).Degrees() > 180_deg ? frc::Rotation2d(-180_deg) : frc::Rotation2d(180_deg) - state.holonomicRotation;
 
 		transformedState.time = state.time;
 		transformedState.velocity = state.velocity;

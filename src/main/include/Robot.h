@@ -81,7 +81,12 @@ class Robot : public frc::TimedRobot {
             { "Mobile", "Mobile"},
             { "Mobile Mid-Cone", "MobileCone", drive::AutonomousPath::StartingAction::eMidCone  },
 
-            { "Balance", "MidBalance"},
+            {
+                "Balance", "MidBalance",
+                drive::AutonomousPath::StartingAction::eNone,
+                { 4.15_mps },
+                { 0.75_mps_sq }
+            },
             { "Mid Cone Balance", "MidBalance", drive::AutonomousPath::StartingAction::eMidCone },
 
             { "Far Mobile", "FarMobile"},
@@ -117,6 +122,18 @@ class Robot : public frc::TimedRobot {
                 { 3.086_mps, 3.47175_mps },
                 { 0.65_mps_sq, 1.85_mps_sq }  
             },
+
+            // New Autos
+            {
+                "Cone Cube High", "ConeCubeHigh", drive::AutonomousPath::StartingAction::eHighCone,
+                { 4.15_mps },
+                { 1.3_mps_sq }
+            },
+            {
+                "Far Cone Cube Run", "FarConeCubeRun", drive::AutonomousPath::StartingAction::eHighCone,
+                { 4.15_mps },
+                { 1_mps_sq }
+            }
         };
 
         /// @brief Whether or not the robot has processed the starting action within auto
@@ -176,4 +193,7 @@ class Robot : public frc::TimedRobot {
         units::degree_t lastPitch = 0_deg;
 
         bool intakedCube = false;
+
+        // Used for RobotPeriodic stuff that needs to be auto vs. teleop aware
+        bool is_teleop = false;
 };

@@ -9,8 +9,14 @@ using namespace ::constants;
 
 void shooter::Cubert::Init() {
     deployMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
-    deployMotor.SetInverted(true);
+    deployMotor.SetInverted(false);
     timekeeper.Start();
+
+    uppieMotor->SetInverted(true);
+    downieMotor->SetInverted(true);
+
+    // This value is in degrees
+    deployController.SetTolerance(4);
 }
 
 void shooter::Cubert::Tick() {
@@ -21,8 +27,11 @@ void shooter::Cubert::Tick() {
 }
 
 void shooter::Cubert::Shoot(FieldConstants::GridHeights height) {
-    if (start_shoot == 0_s)
+    if (start_shoot < 0_s)
         start_shoot = timekeeper.Get();
+
+    if (height == FieldConstants::GridHeights::eIntake && HasElement())
+        height = FieldConstants::GridHeights::eStopped;
 
     _set_deploy_goal(constants::kAngleGridMap.at(height));
 
@@ -35,15 +44,15 @@ void shooter::Cubert::Shoot(FieldConstants::GridHeights height) {
     deploySetpoint = deploy_profile.Calculate(20_ms);
     _set_deploy(
         units::volt_t { deployController.Calculate(GetAngle().value(), deploySetpoint.position.value()) }
-        + deployFF.Calculate(deploySetpoint.velocity)
+        /*+ deployFF.Calculate(GetAngle(), deploySetpoint.velocity)*/
     );
 
     if (height == FieldConstants::GridHeights::eStopped) {
-        start_shoot = 0_s;
-        _set_rollers(-0.75_V);
+        start_shoot = -1_s;
+        _set_rollers(0.95_V);
     } else {
         if (height != FieldConstants::GridHeights::eIntake) {
-            if (start_shoot - timekeeper.Get() >= constants::kRollerDelay) {
+            if (deployController.AtSetpoint() || height == FieldConstants::GridHeights::eUp) {
                 _set_rollers(
                     units::volt_t {
                         rollerController.Calculate(
@@ -54,16 +63,18 @@ void shooter::Cubert::Shoot(FieldConstants::GridHeights height) {
                 );
             }
         } else {
-            _set_rollers(
-                units::volt_t {
-                    rollerController.Calculate(
-                        falconToRPM(
-                            uppieMotor->GetSelectedSensorVelocity(),
-                            constants::kRollerRatio
-                        ).value(), constants::kRollerIntakeSetpoint.value()
-                    )
-                }
-            );
+            if (GetAngle() < 30_deg || deployController.AtSetpoint() && !HasElement()) {
+                _set_rollers(
+                    units::volt_t {
+                        rollerController.Calculate(
+                            _get_roller_avel().value(),
+                            constants::kRollerIntakeSetpoint.value()
+                        )
+                    } + constants::kRollerKs
+                );
+            } else if (HasElement()) {
+                _set_rollers(0.95_V);
+            }
         }
     }
 }
@@ -74,6 +85,7 @@ void shooter::Cubert::_stop_rollers() {
 }
 
 void shooter::Cubert::_set_rollers(units::volt_t volts) {
+    frc::SmartDashboard::PutNumber("cubert_roller_volts", volts.value());
     uppieMotor->SetVoltage(volts);
     downieMotor->SetVoltage(volts);
 }
@@ -89,14 +101,14 @@ void shooter::Cubert::_set_deploy_goal(units::degree_t angle) {
 
 units::revolutions_per_minute_t shooter::Cubert::_get_roller_avel() {
     return falconToRPM(
-        uppieMotor->GetSelectedSensorVelocity(),
+        downieMotor->GetSelectedSensorVelocity(),
         constants::kRollerRatio
     );
 }
 
 units::feet_per_second_t shooter::Cubert::_get_roller_lvel() {
     return falconToMPS(
-        uppieMotor->GetSelectedSensorVelocity(),
+        downieMotor->GetSelectedSensorVelocity(),
         units::inch_t{1.125} * 2 * Pi,
         constants::kRollerRatio
     );

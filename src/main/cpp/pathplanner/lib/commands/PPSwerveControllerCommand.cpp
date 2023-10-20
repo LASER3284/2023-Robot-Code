@@ -9,6 +9,7 @@ using namespace pathplanner;
 
 std::function<void(PathPlannerTrajectory)> PPSwerveControllerCommand::logActiveTrajectory =
 		[](auto traj) {
+			frc::SmartDashboard::PutNumber("active_traj_angle", traj.getEndState().pose.Rotation().Degrees().value());
 		};
 std::function<void(frc::Pose2d)> PPSwerveControllerCommand::logTargetPose = [](
 		auto pose) {

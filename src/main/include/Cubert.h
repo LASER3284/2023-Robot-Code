@@ -14,7 +14,7 @@
 #include <frc/DutyCycleEncoder.h>
 #include <frc/controller/PIDController.h>
 #include <ctre/phoenix/motorcontrol/can/WPI_TalonFX.h>
-#include <frc/controller/SimpleMotorFeedforward.h>
+#include <frc/controller/ArmFeedforward.h>
 #include <frc/Timer.h>
 
 namespace shooter {
@@ -28,14 +28,17 @@ namespace shooter {
 
         /// @brief Angle offset for thru-bore (this is subtracted from the
         /// reported angle).
-        constexpr units::degree_t kThruBoreAngleOffset = 0.0_deg;
+        constexpr units::degree_t kThruBoreAngleOffset = -15.0_deg;
+
+        // NOTE: deploy PID values are with max control effort from SysID set to
+        // 0.25V
 
         /// @brief Proportional Gain for the deploy controller
-        constexpr double kDeployP = 0.099122;
+        constexpr double kDeployP = 0.063508;
         /// @brief Integral Gain for the deploy controller
         constexpr double kDeployI = 0.0;
         /// @brief Derivative Gain for the deploy controller
-        constexpr double kDeployD = 0.0084273;
+        constexpr double kDeployD = 0.0023459;
         
         /// @brief The statically applied voltage.
         constexpr auto kDeployKs = 0.21995_V;
@@ -43,6 +46,11 @@ namespace shooter {
         constexpr auto kDeployKv = 0.009124_V / 1_deg_per_s;
         /// @brief The voltage applied per acceleration unit.
         constexpr auto kDeployKa = 0.00033642_V / 1_deg_per_s_sq;
+
+        /// @brief The gravitationally applied voltage.
+        constexpr auto kDeployKg = 0.14336_V;
+        /// @brief The point at which the cubert is horizontal.
+        constexpr units::degree_t kDeployKgMaxAngle = -56.311_deg;
 
         /// @brief The statically applied voltage.
         constexpr auto kRollerKs = 0.24554_V;
@@ -52,21 +60,21 @@ namespace shooter {
         constexpr auto kRollerKa = 1.3203E-06_V / 1_deg_per_s_sq;
 
         /// @brief Proportional Gain for the roller controller
-        constexpr double kRollerP = 0.0087484;
+        constexpr double kRollerP = 0.00175;
         /// @brief Integral Gain for the roller controller
-        constexpr double kRollerI = 0.0;
+        constexpr double kRollerI = 0.0012;
         /// @brief Derivative Gain for the roller controller
-        constexpr double kRollerD = 0.00011483;
+        constexpr double kRollerD = 0.0;
 
         /// @brief Roller speed in RPM
-        constexpr units::revolutions_per_minute_t kRollerSetpoint = 9000.0_rpm;
+        constexpr units::revolutions_per_minute_t kRollerSetpoint = -9000_rpm;
         /// @brief Roller intake speed in RPM
         /// @todo Verify speeds are valid.
-        constexpr units::revolutions_per_minute_t kRollerIntakeSetpoint = -378_rpm;
+        constexpr units::revolutions_per_minute_t kRollerIntakeSetpoint = 2000_rpm;
 
-        constexpr units::degree_t kUpperLimit = 103.6_deg;
-        constexpr units::degree_t kShootingPos = 118.0_deg;
-        constexpr units::degree_t kLowerLimit = 222.3_deg;
+        constexpr units::degree_t kUpperLimit = 120.0_deg;
+        constexpr units::degree_t kShootingPos = 102.0_deg;
+        constexpr units::degree_t kLowerLimit = 5.0_deg;
 
         /// @brief This is a map of GridHeights to degree values for where the
         /// Cubert should position itself.
@@ -74,7 +82,7 @@ namespace shooter {
             ::constants::FieldConstants::GridHeights,
             units::degree_t
         > kAngleGridMap = {
-            { ::constants::FieldConstants::GridHeights::eUp, kShootingPos },
+            { ::constants::FieldConstants::GridHeights::eUp, kUpperLimit },
             { ::constants::FieldConstants::GridHeights::eMid, kShootingPos },
             { ::constants::FieldConstants::GridHeights::eGround, kLowerLimit },
             { ::constants::FieldConstants::GridHeights::eIntake, kLowerLimit },
@@ -85,7 +93,7 @@ namespace shooter {
         constexpr double kRollerRatio = 2.0 / 3.0;
 
         constexpr units::second_t kRollerDelay = 100_ms;
-        constexpr units::revolutions_per_minute_t kRollerDeadband = 20_rpm;
+        constexpr units::revolutions_per_minute_t kRollerDeadband = 3_rpm;
     }
 
     class Cubert {
@@ -115,8 +123,11 @@ namespace shooter {
             void Shoot(::constants::FieldConstants::GridHeights height);
 
             units::degree_t GetAngle() {
-                return units::degree_t{thruboreEnc.Get()}
-                    - constants::kThruBoreAngleOffset;
+                units::degree_t cw_plus = units::degree_t {thruboreEnc.Get()};
+
+                units::degree_t ccw_plus = 180_deg - cw_plus;
+
+                return ccw_plus + constants::kThruBoreAngleOffset;
             }
 
         private:
@@ -162,8 +173,9 @@ namespace shooter {
                 constants::kDeployD
             };
 
-            frc::SimpleMotorFeedforward<units::degrees> deployFF {
+            frc::ArmFeedforward deployFF {
                 constants::kDeployKs,
+                constants::kDeployKg,
                 constants::kDeployKv,
                 constants::kDeployKa
             };
