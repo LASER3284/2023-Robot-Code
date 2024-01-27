@@ -13,6 +13,7 @@
 #include <frc/trajectory/TrapezoidProfile.h>
 #include <frc/XboxController.h>
 
+#include "Cubert.h"
 #include "FieldConstants.h"
 #include "SwerveModule.h"
 #include "Drive.h"
@@ -52,6 +53,9 @@ class Robot : public frc::TimedRobot {
         /// @brief A string representing the currently selected ""human"" trajectory name
         std::string currentAutonomousState;
 
+        /// @brief An instance of the currently selected auto path
+        drive::AutonomousPath currentAutonomousPath;
+
         /// @brief The subsystem for handling all of the swerve drive train tasks
         drive::Drive drivetrain { &driveController };
 
@@ -70,47 +74,66 @@ class Robot : public frc::TimedRobot {
         /// @brief The subsystem that handles wrist motion/controls
         wrist::Wrist wrist;
 
+        shooter::Cubert cubert;
+
         /// @brief A map filled with the "human friendly" path name and the actual pathplanner file name saved in the deploy folder
         const std::vector<drive::AutonomousPath> mTrajectoryMap {
-            { "Mid Balance", "MidBalance"},
             { "Mobile", "Mobile"},
-            { "Mobile Mid-Cone", "MobileCone"},
-            { "Mid Cone Balance", "MidBalance"},
-            /*
-            { 
-                "Mid Cone Cube", "ConeCube",
-                { 2.46888_mps, 2.46888_mps },
-                { 0.4_mps_sq, 1_mps_sq }
+            { "Mobile Mid-Cone", "MobileCone", drive::AutonomousPath::StartingAction::eMidCone  },
+
+            {
+                "Balance", "MidBalance",
+                drive::AutonomousPath::StartingAction::eNone,
+                { 4.15_mps },
+                { 0.75_mps_sq }
             },
-            { 
-                "Mid-Cone Cube Balance", "ConeCubeBalance",
-                { 2.46888_mps, 2.46888_mps },
-                { 0.4_mps_sq, 2.46888_mps_sq }
-            },
-            */ 
+            { "Mid Cone Balance", "MidBalance", drive::AutonomousPath::StartingAction::eMidCone },
+
             { "Far Mobile", "FarMobile"},
-            { "Far Mobile Mid-Cone", "FarMobileCone"},
-            { "Far Mobile Mid-Cone Balance", "FarMobileConeBalance"},
+            { "Far Mobile Mid-Cone", "FarMobileCone", drive::AutonomousPath::StartingAction::eMidCone },            
             { 
-                "Far Mid Cone Cone", "FarConeCone",
+                "Far Mid Cone Cone", "FarConeCone", drive::AutonomousPath::StartingAction::eMidCone,
                 { 2.46888_mps, 2.46888_mps },
                 { 0.35_mps_sq, 1.25_mps_sq }
             },
             { 
-                "Mid Cone Cone", "MidConeCone"
+                "Mid Cone Cone", "MidConeCone", drive::AutonomousPath::StartingAction::eMidCone,
+                { 2.46888_mps, 2.46888_mps },
+                { 0.5_mps_sq, 1.5_mps_sq }
+            },
+
+            // High Cone Autos
+            { "Mobile High-Cone", "MobileCone", drive::AutonomousPath::StartingAction::eHighCone  },
+            { "High Cone Balance", "MidBalance", drive::AutonomousPath::StartingAction::eHighCone },
+            { 
+                "High Cone Cone", "MidConeCone", drive::AutonomousPath::StartingAction::eHighCone,
+                { 3.086_mps, 3.086_mps },
+                { 0.5_mps_sq, 1.25_mps_sq }
+            },
+
+            // Various Cube Autos
+            { 
+                "High Cone Cube Run", "ConeCube", drive::AutonomousPath::StartingAction::eHighCone,
+                { 3.086_mps, 3.47175_mps },
+                { 0.5_mps_sq, 1.75_mps_sq }  
+            },
+            { 
+                "High Cone Cube Balance", "ConeCubeDock", drive::AutonomousPath::StartingAction::eHighCone,
+                { 3.086_mps, 3.47175_mps },
+                { 0.65_mps_sq, 1.85_mps_sq }  
+            },
+
+            // New Autos
+            {
+                "Cone Cube High", "ConeCubeHigh", drive::AutonomousPath::StartingAction::eHighCone,
+                { 4.15_mps },
+                { 1.3_mps_sq }
+            },
+            {
+                "Far Cone Cube Run", "FarConeCubeRun", drive::AutonomousPath::StartingAction::eHighCone,
+                { 4.15_mps },
+                { 1_mps_sq }
             }
-            /*
-            { 
-                "Far Mid Cone Cube", "FarConeCube",
-                { 2.46888_mps, 2.46888_mps },
-                { 0.35_mps_sq, 1.25_mps_sq }
-            },
-            { 
-                "Far Mid-Cone Cube Balance", "FarMobileConeCubeBalance",
-                { 2.46888_mps, 2.46888_mps },
-                { 0.35_mps_sq, 2_mps_sq }
-            },
-            */
         };
 
         /// @brief Whether or not the robot has processed the starting action within auto
@@ -160,9 +183,17 @@ class Robot : public frc::TimedRobot {
         /// @brief A timer used for tracking time durations during auto in order to avoid ""race conditions"" in robot actions
         frc::Timer autoTimer;
 
+        /// @brief A timer used for tracking the full auto duration
+        frc::Timer totalAutoTimer;
+
         bool autoTimerRunning = false;
 
         bool bHasAutoBalanced = false;
         bool bHasStartedBalancing = false;
         units::degree_t lastPitch = 0_deg;
+
+        bool intakedCube = false;
+
+        // Used for RobotPeriodic stuff that needs to be auto vs. teleop aware
+        bool is_teleop = false;
 };

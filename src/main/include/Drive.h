@@ -41,18 +41,18 @@
 namespace drive {
     class Constants {
         public:
-            static constexpr units::meters_per_second_t  maxTranslationalVelocity = 4.93776_mps;
+            static constexpr units::meters_per_second_t  maxTranslationalVelocity = 4.14528_mps;
             static constexpr units::radians_per_second_t maxRotationalVelocity = 700_deg_per_s;
 
-            static constexpr double kTrajectoryX_P = 2.5;
+            static constexpr double kTrajectoryX_P = 1.005;
             static constexpr double kTrajectoryX_I = 0.0;
             static constexpr double kTrajectoryX_D = 0.0;
 
-            static constexpr double kTrajectoryY_P = 2.5;
+            static constexpr double kTrajectoryY_P = 3.505;
             static constexpr double kTrajectoryY_I = 0.0;
             static constexpr double kTrajectoryY_D = 0.0;
 
-            static constexpr double kTrajectoryTheta_P = 2.5;
+            static constexpr double kTrajectoryTheta_P = 2.0;
             static constexpr double kTrajectoryTheta_I = 0.0;
             static constexpr double kTrajectoryTheta_D = 0.0;
     };
@@ -65,10 +65,21 @@ namespace drive {
     };
 
     struct AutonomousPath {
+        /// @brief An enum representing the various starting actions that an auto can take
+        enum StartingAction {
+            eNone = -1,
+            eMidCone = 0,
+            eHighCone = 1
+        };
+
         /// @brief The "human-friendly" name of the path, used for displaying in the chooser
         std::string humanName;
-
+        
+        /// @brief The actual path name of the file
         std::string pathName;
+
+        /// @brief The inital action that the auto does before following the path
+        StartingAction startingAction = StartingAction::eNone;
 
         std::vector<units::meters_per_second_t> velocityOverrides = {
             2.46888_mps
@@ -145,7 +156,7 @@ namespace drive {
             frc2::PIDController headingPIDController { 4.25, 0.0, 0.0 };
             
             /// @brief Used to snap the robot to specific rotation angles based on the pose angle
-            frc2::PIDController headingSnapPIDController { 4.250000, 0.0, 0.1250 };
+            frc2::PIDController headingSnapPIDController { 4.650000, 0.0, 0.1250 };
 
             AHRS gyro { frc::SerialPort::Port::kMXP };
 
@@ -156,10 +167,10 @@ namespace drive {
             /// @brief A PhotonPoseEstimator grabs the ""best"" pose to be used for the given AprilTags in view
             photonlib::PhotonPoseEstimator photonPoseEstimator {
                 frc::LoadAprilTagLayoutField(frc::AprilTagField::k2023ChargedUp),
-                photonlib::MULTI_TAG_PNP,
+                photonlib::CLOSEST_TO_REFERENCE_POSE,
                 std::move(photonlib::PhotonCamera("mainCam")),
                 frc::Transform3d(
-                    frc::Translation3d(4.5_in, -2_in, 22.625_in),
+                    frc::Translation3d(-2.5_in, 6.5_in, 22.625_in),
                     frc::Rotation3d(0_deg, 5_deg, 180_deg)
                 )
             };

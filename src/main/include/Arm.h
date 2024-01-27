@@ -17,15 +17,15 @@ namespace arm {
             static constexpr int kArmCANID = 19;
 
             /// @brief The gear ratio for the arm (sprockets are 1 to 1)
-            static constexpr double kArmRatio = 27.78/1;
+            static constexpr double kArmRatio = 2.4;
 
             /// @brief The outer diameter of the sprocket * pi in order to convert to linear units
-            static constexpr units::meter_t kSprocketDiameter = (0.0381762_m * constants::Pi);
+            static constexpr units::meter_t kSprocketDiameter = (1.25_in);
 
             /// @brief The constant kG value for the arm extension
             /// This value is defined here rather than in the feedforward because we need to do custom math with it due to the extension being on the pivot
             /// Since the effect of gravity would change based on the shoulder angle rather than be a constant value
-            static constexpr units::volt_t kG = 0.31097_V;
+            static constexpr units::volt_t kG = 0.72845_V;
     };
 
     class Arm {
@@ -59,14 +59,14 @@ namespace arm {
             rev::SparkMaxRelativeEncoder extensionEncoder = extensionMotor.GetEncoder();
 
             /// @brief The feedforward object for the extension of the arm (it acts an ""elevator"")
-            frc::ElevatorFeedforward feedforward { 0.0_V, 0.0_V, 14.512_V / 1_mps, 0.78856_V / 1_mps_sq };
+            frc::ElevatorFeedforward feedforward { 0.53452_V, 0.5_V, 3.0001_V / 1_mps, 0.086621_V / 1_mps_sq };
 
-            frc::PIDController positionController { 0, 0, 0.0 };
+            frc::PIDController positionController { 2.0, 0, 0.0 };
 
             /// @brief The trapezoidal profile constraints for the arm extension
             /// This specifies the max velocity *and* the max acceleration
             /// Ideally this would be in the constants but it would not let me do that.
-            frc::TrapezoidProfile<units::meters>::Constraints constraints { 0.68_mps, 1.36_mps_sq };
+            frc::TrapezoidProfile<units::meters>::Constraints constraints { 4_mps, 7_mps_sq };
 
             /// @brief The current goal to rotate the shoulder to
             frc::TrapezoidProfile<units::meters>::State extensionGoal;

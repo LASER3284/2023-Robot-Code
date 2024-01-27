@@ -14,12 +14,12 @@ namespace intake {
         public:
             /// @brief The CAN ID for the intake motor
             static constexpr int kIntakeID = 56;
+    };
 
-            /// @brief The solenoid port/ID for the intake
-            static constexpr int kIntakeSolenoidID1 = 8;
-
-            /// @brief The solenoid port/ID for the intake mode
-            static constexpr int kIntakeSolenoidID2 = 9;
+    enum FlangeLocation {
+        eForwards = 0,
+        eBackwards = 1,
+        eNone = -1
     };
 
     class Intake {
@@ -66,11 +66,41 @@ namespace intake {
 
             /// @brief Returns true based on the median current of the intake motor
             /// @return Whether or not the intake current has an element in it
-            bool HasElement() { return hasElement; }
+            bool HasElement() {
+                return hasElement; 
+            }
 
             /// @brief Returns whether or not the intake is currently in cube mode
             /// @return Whether or not the intake is cube mode
             bool IsCubeMode() { return cubeMode; }
+
+            double GetOutput() { return intakeMotor.GetAppliedOutput(); }
+
+            FlangeLocation GetFlangeLocation() { 
+                switch (holdPower)
+                {
+                    case -1:
+                        return FlangeLocation::eForwards;
+                    case 1:
+                        return FlangeLocation::eBackwards;
+                    default:
+                        return FlangeLocation::eNone;
+                }
+            }
+
+            void SetFlangeLocation(FlangeLocation location) {
+                switch(location) {
+                    case FlangeLocation::eForwards:
+                        holdPower = -1;
+                        break;
+                    case FlangeLocation::eBackwards:
+                        holdPower = 1;
+                        break;
+                    default:
+                        holdPower = 0;
+                        break;
+                }
+            }
         private:
             /// @brief A boolean whether or not the intake has an element
             bool hasElement = false;
@@ -81,9 +111,6 @@ namespace intake {
             /// @brief A reference for the intake NEO 550 object
             rev::CANSparkMax intakeMotor { Constants::kIntakeID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
             rev::SparkMaxRelativeEncoder intakeEncoder = intakeMotor.GetEncoder();
-
-            frc::Solenoid intakeSolenoid1 { frc::PneumaticsModuleType::REVPH, Constants::kIntakeSolenoidID1 };
-            frc::Solenoid intakeSolenoid2 { frc::PneumaticsModuleType::REVPH, Constants::kIntakeSolenoidID2 };
 
             /// @brief A median filter used to measure the current of the NEO 550 to detect current spikes for object detection
             frc::MedianFilter<units::ampere_t> medianFilter = frc::MedianFilter<units::ampere_t>(18);

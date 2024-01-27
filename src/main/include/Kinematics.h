@@ -157,9 +157,7 @@ namespace kinematics {
             static const units::volt_t CalculateShoulderFeedforward(const units::meter_t extension, const units::radian_t angle, const units::radians_per_second_t velocity, const units::radians_per_second_squared_t accel = 0_rad_per_s_sq) {
                 const units::volt_t kS = ((-0.04522_V * extension.value()) + 0.09874_V);
                 const units::volt_t kG = ((0.17748_V * extension.value()) + 0.28483_V);
-                // const auto kV =          ((0.12778_V * extension.value()) + 4.47792_V) / 1_rad_per_s;
                 const auto kV = 13.529_V / 1_rad_per_s;
-                //const auto kA =          ((0.05782_V * extension.value()) + 0.14243_V) / 1_rad_per_s_sq;
                 const auto kA = 0.8669_V / 1_rad_per_s_sq;
                 
                 // If the arm is 180deg around, the math for the feedforward is calculated with the opposite sign so we need to flip the sign

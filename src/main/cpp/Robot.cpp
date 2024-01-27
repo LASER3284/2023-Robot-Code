@@ -33,6 +33,8 @@ void Robot::RobotInit() {
     arm.SetPositionGoal(arm.GetPosition());
 
     frc::SmartDashboard::PutBoolean("intakeFlipping", true);
+
+    cubert.Init();
 }
 
 /**
@@ -80,12 +82,13 @@ void Robot::RobotPeriodic() {
     wrist.Tick(shoulder.GetRotation());
 
     frc::SmartDashboard::PutNumber("autoTimer_s", autoTimer.Get().value());
+    frc::SmartDashboard::PutBoolean("autoTimerRunning", autoTimerRunning);
 
     bWasInCommunity = bInsideCommunity;
 
-    bool intakeFlipping = frc::SmartDashboard::GetBoolean("intakeFlipping", true);
+    bool intakeFlipping = frc::SmartDashboard::GetBoolean("intakeFlipping", true) && !is_teleop;
     if(intakeFlipping) {
-        if(shoulder.GetRotation() >= 40_deg) {
+        if(shoulder.GetRotation() >= 135_deg) {
             if(wrist.GetRotation() > 45_deg) {
                 intake.FlipDirection(true);
             }
@@ -101,7 +104,13 @@ void Robot::RobotPeriodic() {
                 intake.FlipDirection(true);
             }
         }
+    } else if (is_teleop) {
+        intake.FlipDirection(true);
     }
+
+    frc::SmartDashboard::PutBoolean("cubertHasElement", cubert.HasElement());
+
+    cubert.Tick();
 }
 
 void Robot::AutonomousInit() {
@@ -109,7 +118,8 @@ void Robot::AutonomousInit() {
     // so we should reinitialize the field constants just to be safe.
     fieldConstants.Initialize();
 
-    currentAutonomousState = m_chooser.GetSelected().pathName;
+    currentAutonomousState = m_chooser.GetSelected().humanName;
+    currentAutonomousPath = m_chooser.GetSelected();
     fmt::print("Currently selected auto path: {}\n", currentAutonomousState);
     if(currentAutonomousState == "Autonomous Idle") { 
         drivetrain.ForceVisionPose(); 
@@ -135,14 +145,26 @@ void Robot::AutonomousInit() {
     
     autoTimer.Stop();
     autoTimer.Reset();
+
+    totalAutoTimer.Reset();
+    totalAutoTimer.Restart();
+
+    is_teleop = false;
 }
 
 void Robot::AutonomousPeriodic() {
+    if(intake.HasElement()) {
+        lighthandler.SetColor(frc::Color::kGreen);
+    }
+    else {
+        lighthandler.Rainbow();
+    }
+    
     frc::SmartDashboard::PutString("currentAutonomousState", currentAutonomousState);
     frc::SmartDashboard::PutBoolean("bHasStartedBalancing", bHasStartedBalancing);
     frc::SmartDashboard::PutBoolean("bHasAutoBalanced", bHasAutoBalanced);
 
-    units::degree_t shoulderGoal = shoulder.GetRotation();
+    units::degree_t shoulderGoal = shoulder.GetRotationalGoal();
     units::meter_t armGoal = arm.GetPositionalGoal();
     units::degree_t wristGoal = wrist.GetRotation();
 
@@ -160,15 +182,15 @@ void Robot::AutonomousPeriodic() {
         drivetrain.ForceForward();
 
         // Autos that do nothing at all at the start
-        if(currentAutonomousState == "FarMobile" || currentAutonomousState == "Mobile" || currentAutonomousState == "TestPath") { 
+        if(currentAutonomousPath.startingAction == drive::AutonomousPath::eNone) { 
             bHasProcessedStartingAction = true; 
         }
-        else if(currentAutonomousState == "MidBalance" || currentAutonomousState == "MobileCone" || currentAutonomousState == "FarMobileCone" || currentAutonomousState == "FarMidConeBalance" || currentAutonomousState == "FarConeCone"  || currentAutonomousState == "FarConeCube" || currentAutonomousState == "FarMobileConeBalance" || currentAutonomousState == "FarMobileConeCubeBalance" || currentAutonomousState == "ConeCube" || currentAutonomousState == "ConeCubeBalance" || currentAutonomousState == "MidConeCone") {
-            shoulderGoal = 160_deg;
+        else if(currentAutonomousPath.startingAction == drive::AutonomousPath::eMidCone) {
+            shoulderGoal = 148_deg;
             armGoal = 0.254_m;
-            wristGoal = 10_deg;
+            wristGoal = -2_deg;
 
-            if(units::math::abs(shoulder.GetRotation() - shoulderGoal) <= 2.5_deg) {
+            if(units::math::abs(shoulder.GetRotation() - shoulderGoal) <= 5_deg && units::math::abs(arm.GetPosition() - armGoal) <= 2.5_in) {
                 autoTimer.Start();
                 autoTimerRunning = true;
             }
@@ -181,11 +203,48 @@ void Robot::AutonomousPeriodic() {
             else if(autoTimer.HasElapsed(0.25_s)) {
                 intake.Stop();
                 shoulderGoal = 90_deg;
-                armGoal = 0_m;
+                armGoal = 0_m + 2_in;
                 wristGoal = 0_deg;
             }
             else if(autoTimer.HasElapsed(0.125_s)) {
                 intake.Shoot();
+            }
+            else {
+                intake.SetFlangeLocation(intake::FlangeLocation::eBackwards);
+                intake.Hold();
+            }
+        }
+        else if(currentAutonomousPath.startingAction == drive::AutonomousPath::eHighCone) {
+            shoulderGoal = 141_deg;
+            wristGoal = -18_deg;
+            
+            if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 45_deg) {
+                armGoal = 0.615_m;
+            }
+
+            if(units::math::abs(shoulder.GetRotation() - shoulderGoal) <= 2.5_deg && units::math::abs(arm.GetPosition() - armGoal) <= 4_in) {
+                autoTimer.Start();
+                autoTimerRunning = true;
+            }
+
+            if(autoTimer.HasElapsed(0.5_s)) {
+                bHasProcessedStartingAction = true;
+                autoTimerRunning = false;
+                autoTimer.Reset();
+                autoTimer.Stop();
+            }
+            else if(autoTimer.HasElapsed(0.25_s)) {
+                intake.Stop();
+                shoulderGoal = 90_deg;
+                armGoal = 0_m + 2_in;
+                wristGoal = 0_deg;
+            }
+            else if(autoTimer.HasElapsed(0.125_s)) {
+                intake.Shoot();
+            }
+            else {
+                intake.SetFlangeLocation(intake::FlangeLocation::eBackwards);
+                intake.Hold();
             }
         }
     }
@@ -198,116 +257,261 @@ void Robot::AutonomousPeriodic() {
         bool bForceStop = trajectoryCompleted.bCompletedPath;
         if(!trajectoryCompleted.bCompletedPath && !trajectoryCompleted.bAtStopPoint) {
             // All of these autos grab the preloaded cone so we want to be moving the arm pre-emptively.
-            if(currentAutonomousState == "FarConeCone" || currentAutonomousState == "MidConeCone") {
+            if(currentAutonomousState == "Far Mid Cone Cone" || currentAutonomousState == "Mid Cone Cone" || currentAutonomousState == "High Cone Cone") {
                 if(trajectoryCompleted.currentStopIndex == 0) {
-                    armGoal = 0_m;
-                    shoulderGoal = -17.4_deg;
-                    wristGoal = -66.593_deg;
+                    armGoal = 0_m + 2_in;
+                    shoulderGoal = -21_deg;
+                    wristGoal = -72_deg;
                     intake.ConeMode();
                 }
-                else if(trajectoryCompleted.currentStopIndex == 1) {                    
+                else if(trajectoryCompleted.currentStopIndex == 1 || trajectoryCompleted.currentStopIndex == 2) {
                     // Avoid extending the arm out at first in order to avoid crashing into things with the arm accidentally.
-                    shoulderGoal = 90_deg;
-                    wristGoal = 12_deg;
-
+                    shoulderGoal = 140_deg;
+                    if(currentAutonomousState == "High Cone Cone") {
+                        wristGoal = -18_deg;
+                    }
+                    else {
+                        wristGoal = 12_deg;
+                    }
+                    
+                    autoTimerRunning = false;
                     intake.Hold();
                 }
             }
-            else if(currentAutonomousState == "FarMobileConeCubeBalance" || currentAutonomousState == "ConeCubeBalance") {
+            else if(currentAutonomousState == "High Cone Cube Run" || currentAutonomousState == "Mid Cone Cube" || currentAutonomousState == "High Cone Cube Balance") {
                 if(trajectoryCompleted.currentStopIndex == 0) {
-                    armGoal = 0_m;
-                    shoulderGoal = -31_deg;
-                    wristGoal = 21_deg;
-                    intake.CubeMode();
+                    armGoal = 0.035_in;
+                    shoulderGoal = -21_deg;
+                    wristGoal = 23_deg;
+                    intake.ConeMode();
                 }
                 else if(trajectoryCompleted.currentStopIndex == 1) {
-                    shoulderGoal = 45_deg;
-                    armGoal = 0_m;
-                    wristGoal = 0_deg; 
+                    shoulderGoal = 140_deg;
+                    wristGoal = 65_deg;
+                    if(currentAutonomousState == "High Cone Cube Run") {
+                        armGoal = 0.473_m;
+                    }
+                    
+                    autoTimerRunning = false;
+                    intake.Hold();
+                }
+                else if(trajectoryCompleted.currentStopIndex == 2) {
+                    shoulderGoal = 90_deg;
+                    armGoal = 0_m + 2_in;
                 }
             }
-            // Spin the arm around in order to shift the center of mass 
-            else if(currentAutonomousState == "FarMobileConeBalance") {
-                shoulderGoal = 45_deg;
-                armGoal = 0_m;
-                wristGoal = 0_deg;
-            }
-            else if(currentAutonomousState == "MidBalance") {
+            else if(currentAutonomousState == "Mid Cone Balance" || currentAutonomousState == "High Cone Balance") {
                 shoulderGoal = 90_deg;
-                armGoal = 0_m;
-                wristGoal = 0_deg;
+                armGoal = 0_m + 2_in;
+                wristGoal = 90_deg;
+            }
+            else if(currentAutonomousState == "Cone Cube High") {
+                if (trajectoryCompleted.currentStopIndex == 0) {
+                    shoulderGoal = -25_deg;
+                    armGoal = 0.201_m;
+                    wristGoal = 57_deg;
+                    intake.CubeMode();
+                } else if (trajectoryCompleted.currentStopIndex == 1) {
+                    intake.CubeMode();
+                    shoulderGoal = 137_deg;
+                    armGoal = 2_in;
+                    wristGoal = 80_deg;
+                } else if (trajectoryCompleted.currentStopIndex == 2) {
+                    shoulderGoal = 90_deg;
+                    wristGoal = 0_deg;
+                    armGoal = 2_in;
+                    cubert.Shoot(constants::FieldConstants::GridHeights::eIntake);
+                } else if (trajectoryCompleted.currentStopIndex == 3) {
+                    cubert.Shoot(constants::FieldConstants::GridHeights::eStopped);
+                }
+            }
+            else if (currentAutonomousState == "Far Cone Cube Run") {
+                if (trajectoryCompleted.currentStopIndex == 0) {
+                    shoulderGoal = 0_deg;
+                    armGoal = 2_in;
+                }
+                else if (trajectoryCompleted.currentStopIndex == 1) {
+                    shoulderGoal = -23_deg;
+                    intake.CubeMode();
+                    armGoal = 0.201_m;
+                    wristGoal = 65_deg;
+                }
+                else if (trajectoryCompleted.currentStopIndex == 2) {
+                    shoulderGoal = 90_deg;
+                    intake.CubeMode();
+                    armGoal = 2_in;
+                    wristGoal = 80_deg;
+                }
+                else if (trajectoryCompleted.currentStopIndex == 3) {
+                    intake.CubeMode();
+                    shoulderGoal = 137_deg;
+                    armGoal = 2_in;
+                    wristGoal = 80_deg;
+                }
+                else if (trajectoryCompleted.currentStopIndex == 4) {
+                    shoulderGoal = 90_deg;
+                    armGoal = 2_in;
+                    wristGoal = 90_deg;
+                }
             }
         }
         else if(trajectoryCompleted.bAtStopPoint) {
-            autoTimer.Start();
-            
-            // Score the prestaged cube
-            if(currentAutonomousState == "FarConeCube" || currentAutonomousState == "ConeCube") {
+            // These autos pick up / score the preloaded cone mid
+            if(currentAutonomousState == "Far Mid Cone Cone" || currentAutonomousState == "Mid Cone Cone") {
                 if(trajectoryCompleted.currentStopIndex == 0) {
                     shoulderGoal = 0_deg;
-                    if(autoTimer.HasElapsed(0.5_s)) {
-                        drivetrain.StartNextTrajectory();
-                    }
-                    else {
-                        drivetrain.ForceStop();
-                    }
+                    drivetrain.StartNextTrajectory();
                 }
                 else if(trajectoryCompleted.currentStopIndex == 1) {
-                    shoulderGoal = 160_deg;
-                    armGoal = 0.0_m;
-                    wristGoal = 18_deg;
-
-                    bDriveTrainStopped = true;
-                    intake.Shoot();
-                }
-            }
-            // These autos pick up / score the preloaded cone
-            else if(currentAutonomousState == "FarConeCone" || currentAutonomousState == "MidConeCone") {
-                if(trajectoryCompleted.currentStopIndex == 0) {
-                    shoulderGoal = 0_deg;
-                    if(autoTimer.HasElapsed(0.5_s)) {
-                        drivetrain.StartNextTrajectory();
-                    }
-                    else {
-                        drivetrain.ForceStop();
-                    }
-                }
-                else if(trajectoryCompleted.currentStopIndex == 1) {
-                    shoulderGoal = 160_deg;
+                    shoulderGoal = 150_deg;
                     armGoal = 0.254_m;
                     wristGoal = 10_deg;
 
-                    if(units::math::abs(shoulder.GetRotation() - shoulderGoal) <= 1.5_deg) {
-                        autoTimer.Start();
+                    if(units::math::abs(arm.GetPosition() - armGoal) <= 2.5_in) {
+                        intake.Shoot();
+                        if(!autoTimerRunning) {
+                            autoTimer.Reset();
+                            autoTimer.Restart();
+                        }
                         autoTimerRunning = true;
                     }
 
                     if(autoTimer.HasElapsed(0.5_s)) {
-                        drivetrain.ForceStop();
-                    }
-                    else if(autoTimer.HasElapsed(0.25_s)) {
                         intake.Stop();
+
                         shoulderGoal = 90_deg;
-                        armGoal = 0_m;
-                        wristGoal = 0_deg;
+                        if(units::math::abs(shoulder.GetRotation() - shoulderGoal) <= 10_deg) {
+                            armGoal = 0_m + 2_in;
+                            wristGoal = 0_deg;
+                            drivetrain.StartNextTrajectory();
+                        }
                     }
-                    else if(autoTimer.HasElapsed(0.125_s)) {
-                        intake.Shoot();
-                    }
+
+                    drivetrain.ForceStop();
+                }
+                else if(trajectoryCompleted.currentStopIndex == 2) {
+                    drivetrain.ForceStop();
                 }
             }
-            else if(currentAutonomousState == "FarMobileConeCubeBalance" || currentAutonomousState == "ConeCubeBalance") {
+            else if(currentAutonomousState == "High Cone Cone") {
                 if(trajectoryCompleted.currentStopIndex == 0) {
+                    shoulderGoal = 0_deg;
                     drivetrain.StartNextTrajectory();
                 }
                 else if(trajectoryCompleted.currentStopIndex == 1) {
+                    shoulderGoal = 148_deg;
+                    wristGoal = 2_deg;
+            
+                    if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 45_deg) {
+                        armGoal = 0.78_m;
+                    }
+
+                    if(units::math::abs(arm.GetPosition() - armGoal) <= 2.5_in) {
+                        intake.Shoot();
+                        if(!autoTimerRunning) {
+                            autoTimer.Reset();
+                            autoTimer.Restart();
+                        }
+                        autoTimerRunning = true;
+                    }
+
+                    if(autoTimer.HasElapsed(0.5_s)) {
+                        intake.Stop();
+
+                        shoulderGoal = 90_deg;
+                        armGoal = 0_m + 2_in;
+                        wristGoal = 0_deg;
+
+                        drivetrain.StartNextTrajectory();
+                    }
+
+                    drivetrain.ForceStop();
+                }
+                else if(trajectoryCompleted.currentStopIndex == 2) {
+                    drivetrain.ForceStop();
+                }
+            }
+            // These autos score the pre-staged cube
+            else if(currentAutonomousState == "Mid Cone Cube Run" || currentAutonomousState == "High Cone Cube Run" || currentAutonomousState == "High Cone Cube Balance") {
+                if(trajectoryCompleted.currentStopIndex == 0) {
+                    shoulderGoal = 0_deg;
+                    drivetrain.StartNextTrajectory();
+                }
+                else if(trajectoryCompleted.currentStopIndex == 1) {
+                    shoulderGoal = 148_deg;
+                    wristGoal = 65_deg;
+                    armGoal = 0.473_m;
+
+                    drivetrain.ForceStop();
+                    if(units::math::abs(arm.GetPosition() - armGoal) <= 8_in) {
+                        intake.Shoot();
+                        if(!autoTimerRunning) {
+                            autoTimer.Reset();
+                            autoTimer.Restart();
+                        }
+                        autoTimerRunning = true;
+                    }
+
+                    if(autoTimer.HasElapsed(0.125_s)) {
+                        intake.Stop();
+
+                        shoulderGoal = 90_deg;
+                        armGoal = 0_m + 2_in;
+                        wristGoal = 0_deg;
+
+                        drivetrain.StartNextTrajectory();
+                    }
+                }
+                else if(trajectoryCompleted.currentStopIndex == 2 && currentAutonomousState == "High Cone Cube Run") {
+                    intake.Stop();
+                    shoulderGoal = 90_deg;
+                    armGoal = 0_m + 2_in;
+                    wristGoal = 0_deg;
+                    drivetrain.ForceStop();
+                }
+                else if(trajectoryCompleted.currentStopIndex == 2 && currentAutonomousState == "High Cone Cube Balance") {
+                    drivetrain.ForceStop();
                     bDriveTrainStopped = true;
                 }
             }
-            // Autos that do nothing at all and just force stop
-            else if(currentAutonomousState == "TestPath") {
-                // For the balancing autos, we want to ""force stop"" but just to avoid logic issues with force stopping the drive train before we're ready.
+            else if(currentAutonomousState == "Mid Cone Balance" || currentAutonomousState == "High Cone Balance" || currentAutonomousState == "Balance") {
                 bDriveTrainStopped = true;
+                drivetrain.ForceStop();
+                autoTimerRunning = false;
+            }
+            else if (currentAutonomousState == "Cone Cube High") {
+                if (trajectoryCompleted.currentStopIndex == 0) {
+                    intake.CubeMode();
+                    drivetrain.StartNextTrajectory();
+                }
+                else if (trajectoryCompleted.currentStopIndex == 1) {
+                    armGoal = 0.6_m;
+                    wristGoal = 80_deg;
+                    if (arm.GetPosition() >= 0.59_m) {
+                        intake.Spit();
+                        drivetrain.StartNextTrajectory();
+                    }
+                }
+                else if (trajectoryCompleted.currentStopIndex == 2) {
+                    drivetrain.StartNextTrajectory();
+                }
+            }
+            else if (currentAutonomousState == "Far Cone Cube Run") {
+                if (trajectoryCompleted.currentStopIndex == 2) {
+                    intake.CubeMode();
+                    drivetrain.StartNextTrajectory();
+                }
+                else if (trajectoryCompleted.currentStopIndex == 3) {
+                    armGoal = 0.6_m;
+                    wristGoal = 80_deg;
+                    if (arm.GetPosition() >= 0.59_m) {
+                        intake.Spit();
+                        drivetrain.StartNextTrajectory();
+                    }
+                }
+                else {
+                    drivetrain.StartNextTrajectory();
+                }
             }
             else if(bForceStop) {
                 bDriveTrainStopped = true;
@@ -316,19 +520,19 @@ void Robot::AutonomousPeriodic() {
         }
 
     }
-    else if(currentAutonomousState == "MidBalance" || currentAutonomousState == "FarMobileConeBalance"  || currentAutonomousState == "FarMidConeBalance"  || currentAutonomousState == "TestPath" || currentAutonomousState == "FarMobileConeCubeBalance"  || currentAutonomousState == "ConeCubeBalance") {
+    else if(currentAutonomousState == "Balance" || currentAutonomousState == "Mid Cone Balance" || currentAutonomousState == "High Cone Balance" || currentAutonomousState == "High Cone Cube Balance" /*|| currentAutonomousState == "Cone Cube Shoot Balance"*/) {
         // Move the arm down and start driving forward in order to shift the CoG towards the charge station
-        shoulderGoal = 75_deg;
-        armGoal = 0_m;
+        shoulderGoal = 30_deg;
+        armGoal = 0_m + 2_in;
         wristGoal = 0_deg;
         bool bFlipPowers = false;
         // If we're climbing from the opposite side of the charge station, we want to flip the arm around the other way
-        if(currentAutonomousState == "TestPath" || currentAutonomousState == "FarMobileConeBalance" || currentAutonomousState == "FarMobileConeCubeBalance" || currentAutonomousState == "ConeCubeBalance") {
+        if(currentAutonomousState == "FarMobileConeBalance" || currentAutonomousState == "FarMobileConeCubeBalance" || currentAutonomousState == "ConeCubeBalance") {
             bFlipPowers = true;
         }
         
         if(bFlipPowers) {
-            shoulderGoal = 145_deg;
+            shoulderGoal = 150_deg;
         }
 
         bForceStop = bHasAutoBalanced;
@@ -347,14 +551,25 @@ void Robot::AutonomousPeriodic() {
             }
 
             if(bHasStartedBalancing) {
-                if(lastPitch - drivetrain.GetPitch() > (lastPitch * (bFlipPowers ? 1 : -1) + 0.03_deg)) {
-                    bHasAutoBalanced = true;
-                    bForceStop = true;
-                    drivetrain.XPattern();
-                    drivetrain.ForceStop();
+                if(lastPitch - drivetrain.GetPitch() > (lastPitch * (bFlipPowers ? 1 : -1) + 0.02_deg)) {
+                    if(!autoTimerRunning) {
+                        autoTimer.Reset();
+                        autoTimer.Restart();
+                        autoTimerRunning = true;
+                    }
+                    
+                    if(autoTimerRunning && !autoTimer.HasElapsed(15_s) && !(units::math::abs(drivetrain.GetPitch()) < 4_deg)) {
+                        drivetrain.DriveRelative(0.2);
+                    }
+                    else {
+                        bHasAutoBalanced = true;
+                        bForceStop = true;
+                        drivetrain.XPattern();
+                    }
                 }
                 else {
-                    drivetrain.DriveRelative(0.4);
+                    autoTimerRunning = false;
+                    drivetrain.DriveRelative(0.25);
                 }
             }
 
@@ -362,13 +577,16 @@ void Robot::AutonomousPeriodic() {
         }
         else {
             drivetrain.XPattern();
-            drivetrain.ForceStop();
         }
     }
     // If we're fully finished with the path, force stop the drive train in order to stop moving
     else if(bDriveTrainStopped || bForceStop) {
-        drivetrain.ForceStop();
+        drivetrain.XPattern();
         bDriveTrainStopped = true;
+    }
+
+    if (bHasAutoBalanced) {
+        shoulderGoal = 90_deg;
     }
 
     const kinematics::KinematicState kinematicState = { arm.GetPosition(), shoulder.GetRotation(), wrist.GetRotation() };
@@ -393,6 +611,8 @@ void Robot::TeleopInit() {
     arm.ToggleControl(true);
 
     // On teleop init, set the wrist to go to the current wrist angle so that way its not trying to move to a previous setpoint
+    shoulder.RefreshController();
+    
     wrist.SetRotationGoal(wrist.GetRotation());
     shoulder.SetRotationGoal(shoulder.GetRotation());
     arm.SetPositionGoal(arm.GetPosition());
@@ -401,6 +621,8 @@ void Robot::TeleopInit() {
         rotationalFlip = true;
     }
     rotationalTimer.Restart();
+
+    is_teleop = true;
 }
 
 void Robot::TeleopPeriodic() {
@@ -411,21 +633,14 @@ void Robot::TeleopPeriodic() {
     if(auxController.GetLeftTriggerAxis() >= 0.5) {
         lighthandler.SetColor(frc::Color::kOrange);
         intake.ConeMode();
-    }
-    else if (auxController.GetRightTriggerAxis() >= 0.5)
-    {
-        lighthandler.SetColor(frc::Color::kPurple);
-        intake.CubeMode();
+        intakedCube = false;
     }
     else if(auxController.GetRightBumper()) {
         lighthandler.SetColor(frc::Color::kRed);
         intake.Spit();
+        intakedCube = false;
     }
-    else if(auxController.GetLeftBumper()) {
-        lighthandler.SetColor(frc::Color::kRed);
-        intake.Shoot();
-    }
-    else if(intake.HasElement()) {
+    else if(intake.HasElement() || cubert.HasElement()) {
         // Set the lights to green whenever we've picked something up
         lighthandler.SetColor(frc::Color::kGreen);
 
@@ -437,49 +652,74 @@ void Robot::TeleopPeriodic() {
 
         // After 2 seconds, we want to stop rumbling the controller in order to avoid annoying the driver.
         driveController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, rumbleTimer.HasElapsed(1_s) ? 0.0 : 0.5);
+
+        intakedCube = !intake.HasElement();
     }
     else {
         rumbleTimer.Reset();
         rumbleTimer.Stop();
-        intake.Stop();
+        intake.ConeMode();
         // Make sure to stop rumbling the controller
         driveController.SetRumble(frc::GenericHID::RumbleType::kBothRumble, 0.0);
     }
     
     const bool bAutoAlign = false;
+    auto cubeGoal = -1;
+
     if(!bAutoAlign) {
         const double dpadValue = auxController.GetPOV();
         // If the aux driver is hitting DPAD Up, drive the arm to the high position
+        // If the driver is hitting it and we don't have an element in the cone intake, shoot out a cube
         if(dpadValue == 0) {
-            shoulderGoal = 29.7_deg;
-            wristGoal = 30.116_deg;
-            if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 10_deg) {
-                armGoal = 0.735_m;
+            if(intakedCube) {
+                cubeGoal = constants::FieldConstants::GridHeights::eUp;
             }
+            else {
+                shoulderGoal = 36_deg; // Formerly: 40_deg
+                wristGoal = 18_deg;
+                if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 25_deg) {
+                    armGoal = 0.80_m;
+                }
+            }
+        }
+        else if(dpadValue == 90) {
+            shoulderGoal = 140_deg;
+            wristGoal = 72_deg;
+            armGoal = 0_m + 2_in;
         }
         // Drive the arm to the mid position when hitting down
         else if(dpadValue == 180) {
-            if(shoulder.GetRotation() < 110_deg) {
-                shoulderGoal = 25_deg;
-                wristGoal = 34.9_deg;
-            
-                if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 25_deg) {
-                    armGoal = 0.1367_m;
-                }
+            if(intakedCube) {
+                cubeGoal = constants::FieldConstants::GridHeights::eMid;
             }
             else {
-                shoulderGoal = 155_deg;
-                wristGoal = 12_deg;
-                
+                shoulderGoal = 32_deg;
+                wristGoal = 2_deg;
+            
                 if(units::math::abs(shoulderGoal - shoulder.GetRotation()) <= 25_deg) {
-                    armGoal = 0.254_m;
+                    armGoal = 0.214_m - 2_in; // Formerly: 0.2896_m
                 }
             }
         }
         else if(dpadValue == 270) {
-            shoulderGoal = 90_deg;
-            wristGoal = 0_deg;
-            armGoal = 0_m;
+            // Don't start moving the arm until we have the arm mostly in
+            if (arm.GetPosition() < 15_in) {
+                shoulderGoal = 90_deg;
+            }
+
+            armGoal = 0_m + 2_in;
+
+            // Change the wrist angle based on the flange location so that way we can help passively hold the cone better
+            switch (intake.GetFlangeLocation())
+            {
+                // NOT NEEDED B/C WE USE ONLY ONE SIDE FOR INTAKE
+                //case intake::FlangeLocation::eBackwards:
+                //    wristGoal = -67_deg;
+                //    break;
+                default:
+                    wristGoal = 90_deg;
+                    break;
+            }
         }
     }
     else {
@@ -638,7 +878,7 @@ void Robot::TeleopPeriodic() {
     }
 
     double wristOverride = frc::ApplyDeadband(auxController.GetRightY(), 0.10);
-    if(auxController.GetStartButtonPressed()) {
+    if(auxController.GetStartButtonReleased()) {
         wrist.ResetRotation();
     }
 
@@ -655,7 +895,7 @@ void Robot::TeleopPeriodic() {
 
     // Use the ""fork"" up/down buttons in order to control the arm manually up/down
     if(auxController.GetAButton()) arm.ManualControl(0.5);
-    else if(auxController.GetBButton()) arm.ManualControl(-0.5);
+    else if(auxController.GetBButton()) arm.ManualControl(-0.075);
     else {
         arm.ManualControl(0.0);
     }
@@ -677,31 +917,40 @@ void Robot::TeleopPeriodic() {
     }
 
     frc::SmartDashboard::PutNumber("shoulderOverride", shoulderOverride);
-    // B is the panic button, if we've hit the panic button, move the arm up into the air
-    if(driveController.GetRawButton(constants::XboxButtons::eButtonB)) {
-        shoulderGoal = 90_deg;
-        armGoal = 0_m;
+
+    // Shelf button
+    if(auxController.GetYButton()) {
+        shoulderGoal = 61_deg;
+        wristGoal = -26_deg;
+        armGoal = 0.105_m - 2_in;
+    }
+    
+    if(driveController.GetRawButton(constants::XboxButtons::eButtonLB)) {
+        cubert.Shoot(constants::FieldConstants::GridHeights::eIntake);
+        intakedCube = true;
+    }
+    else if(cubeGoal != -1 || auxController.GetRightTriggerAxis() >= 0.25 || auxController.GetLeftBumper()) {
+        if(auxController.GetRightTriggerAxis() >= 0.25) {
+            cubeGoal = constants::FieldConstants::GridHeights::eGround;
+        }
+        else if(auxController.GetLeftBumper()) {
+            cubeGoal = constants::FieldConstants::GridHeights::eGroundSpit;
+        }
+        // Set the cubert to start shooting at the specified height
+        cubert.Shoot((constants::FieldConstants::GridHeights)cubeGoal);
+
+        lighthandler.SetColor(frc::Color::kRed);
+    }
+    else {
+        cubert.Shoot(constants::FieldConstants::GridHeights::eStopped);
     }
 
-    // Ground Button
-    if(auxController.GetXButton()) {
-        armGoal = 0_m;
-        shoulderGoal = -18.5_deg;
-        wristGoal = 70_deg;
+    // B is the panic button, if we've hit the panic button, move the arm up into the air
+    // If the intake is deployed, we also want to pull the arm in for panic mode.
+    if(driveController.GetRawButton(constants::XboxButtons::eButtonB) || cubert.IsDeployed()) {
+        shoulderGoal = 90_deg;
+        armGoal = 0_m + 2_in;
     }
-    if(auxController.GetYButton()) {
-        armGoal = 0_m;
-        shoulderGoal = -17.4_deg;
-        wristGoal = -66.593_deg;
-    }
-    /*
-    // Double Substation
-    if(auxController.GetYButton()) {
-        armGoal = 0_m;
-        shoulderGoal = 30_deg;
-        wristGoal = -90_deg;
-    }
-    */
 
     shoulder.SetRotationGoal(shoulderGoal);    
     arm.SetPositionGoal(armGoal);
@@ -715,6 +964,8 @@ void Robot::DisabledInit() {
     drivetrain.SetJoystick(false);
     arm.ToggleControl(false);
     shoulder.ToggleControl(false);
+
+    is_teleop = false;
 }
 
 void Robot::DisabledPeriodic() {
@@ -727,7 +978,7 @@ void Robot::DisabledPeriodic() {
 
 void Robot::TestInit() {
     drivetrain.SetJoystick(false);
-    arm.ToggleControl(false);
+    arm.ToggleControl(true);
     shoulder.ToggleControl(false);
     
     rev::CANSparkMaxLowLevel::EnableExternalUSBControl(true);
@@ -736,7 +987,9 @@ void Robot::TestInit() {
     drivetrain.ForceVisionPose();
 }
 
-void Robot::TestPeriodic() {}
+void Robot::TestPeriodic() {
+    arm.ManualControl(frc::ApplyDeadband(auxController.GetLeftY(), 0.10));
+}
 
 void Robot::SimulationInit() {}
 

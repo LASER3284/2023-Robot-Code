@@ -33,9 +33,9 @@ namespace drive {
             double getDriveEncPos();
             void ResetEncoders();
 
-            static constexpr units::meters_per_second_t kMaxSpeed = 4.93776_mps;
+            static constexpr units::meters_per_second_t kMaxSpeed = 4.14528_mps;
         private:
-            static constexpr double kGearRatio = (6.86 / 1.0);
+            static constexpr double kGearRatio = (8.16 / 1.0);
             static constexpr units::meter_t kWheelDiameter = 0.1016_m;
             static constexpr units::meter_t kWheelCircumference = (kWheelDiameter * constants::Pi);
             static constexpr int kEncoderResolution = 2048;
@@ -49,18 +49,17 @@ namespace drive {
             rev::CANSparkMax*  turnmotor;
             ctre::phoenix::sensors::CANCoder*               encoder;
 
-            // TODO: Run drive-train characterization
-            frc2::PIDController drivePIDController { 0.020962, 0.0, 0.0};
+            frc2::PIDController drivePIDController { 0.72837, 0.0, 0.0};
             frc2::PIDController turnPIDController {
-                0.010, // P: 0.011
+                0.0095, // P: 0.011
                 0.000, // I: 0.000
-                0.000, // D: 0.000
+                0.0, // D: 0.000
             };
 
             frc::SimpleMotorFeedforward<units::meters> driveFeedforward { 
-                0.17827_V,                      // kS
-                2.166 * 1_V * 1_s / 1_m,      // kV
-                0.18284 * 1_V * 1_s * 1_s / 1_m // kA
+                0.24577_V,                      // kS
+                2.7719 * 1_V * 1_s / 1_m,      // kV
+                0.34302 * 1_V * 1_s * 1_s / 1_m // kA
             };
 
             units::degree_t lastAngle = 0_deg;

@@ -8,7 +8,7 @@ intake::Intake::Intake() {
 
 void intake::Intake::Tick() {
     intakeCurrent = medianFilter.Calculate(units::ampere_t { intakeMotor.GetOutputCurrent() });
-    bool bHasNewElement = fallingDebouncer.Calculate(risingDebouncer.Calculate(intakeCurrent >= 19.5_A) && wpi::sgn(intakeMotor.GetAppliedOutput()) != -holdPower);
+    bool bHasNewElement = fallingDebouncer.Calculate(risingDebouncer.Calculate(intakeCurrent >= 12_A) && wpi::sgn(intakeMotor.GetAppliedOutput()) != -holdPower);
 
     frc::SmartDashboard::PutNumber("intakeCurrent_a", intakeMotor.GetOutputCurrent());
     frc::SmartDashboard::PutNumber("filteredIntakeCurrent_a", intakeCurrent.value());
@@ -23,6 +23,8 @@ void intake::Intake::Tick() {
         holdPower = 0;
     }
 
+    frc::SmartDashboard::PutNumber("flangeLocation", (double)GetFlangeLocation());
+
     hasElement = bHasNewElement;
 }
 
@@ -35,13 +37,13 @@ void intake::Intake::CubeMode() {
 }
 
 void intake::Intake::Inhale() {
-    // Run the main intake motor at 100% in order to start intaking things
-    intakeMotor.Set(-1.00 * intakePower);
+    // Run the main intake motor at 75% in order to start intaking things
+    intakeMotor.Set(-0.75 * intakePower);
 }
 
 void intake::Intake::Hold() {
     // Apply a small amount of voltage in order to keep the item in the claw
-    intakeMotor.Set(1.00 * holdPower);
+    intakeMotor.Set(0.75 * holdPower);
 }
 
 void intake::Intake::Spit() {

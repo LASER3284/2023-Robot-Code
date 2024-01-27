@@ -2,9 +2,6 @@
   "NetworkTables": {
     "transitory": {
       "SmartDashboard": {
-        "Auto Modes": {
-          "open": true
-        },
         "field": {
           "open": true
         },
@@ -13,12 +10,16 @@
     },
     "types": {
       "/FMSInfo": "FMSInfo",
+      "/LiveWindow/Ungrouped/DigitalInput[0]": "Digital Input",
+      "/LiveWindow/Ungrouped/DigitalInput[1]": "Digital Input",
       "/LiveWindow/Ungrouped/Scheduler": "Scheduler",
       "/LiveWindow/Ungrouped/Talon FX [10]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [11]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [14]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [18]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [35]": "Motor Controller",
+      "/LiveWindow/Ungrouped/Talon FX [44]": "Motor Controller",
+      "/LiveWindow/Ungrouped/Talon FX [45]": "Motor Controller",
       "/LiveWindow/Ungrouped/Talon FX [7]": "Motor Controller",
       "/LiveWindow/Ungrouped/navX-Sensor[1]": "Gyro",
       "/SmartDashboard/Auto Modes": "String Chooser",
@@ -28,9 +29,18 @@
       "/SmartDashboard/headingSnapPIDController": "PIDController"
     }
   },
+  "NetworkTables Info": {
+    "Connections": {
+      "open": true
+    }
+  },
   "NetworkTables Settings": {
     "mode": "Client (NT3)",
-    "serverTeam": "3284"
+    "serverTeam": "3284",
+    "visible": false
+  },
+  "NetworkTables View": {
+    "visible": false
   },
   "Plots": {
     "Plot <0>": {
@@ -95,6 +105,139 @@
       ],
       "window": {
         "name": "Intake",
+        "visible": false
+      }
+    },
+    "Plot <1>": {
+      "plots": [
+        {
+          "axis": [
+            {
+              "autoFit": true
+            }
+          ],
+          "height": 401,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/angularIntakeVelocity"
+            },
+            {
+              "color": [
+                0.8666667342185974,
+                0.5176470875740051,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/angularFlywheelVelocity"
+            }
+          ]
+        },
+        {
+          "height": 401,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/flywheelOutput"
+            },
+            {
+              "color": [
+                0.8666667342185974,
+                0.5176470875740051,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/intakeOutput"
+            },
+            {
+              "color": [
+                0.3333333432674408,
+                0.658823549747467,
+                0.4078431725502014,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/shooterHasElement"
+            }
+          ]
+        }
+      ],
+      "window": {
+        "name": "Cube Shooter",
+        "visible": false
+      }
+    },
+    "Plot <2>": {
+      "plots": [
+        {
+          "axis": [
+            {
+              "autoFit": true
+            }
+          ],
+          "crosshairs": true,
+          "height": 373,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/fl_vel"
+            },
+            {
+              "color": [
+                0.8666667342185974,
+                0.5176470875740051,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/br_vel"
+            }
+          ]
+        },
+        {
+          "axis": [
+            {
+              "autoFit": true
+            }
+          ],
+          "height": 373,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/fl_drive"
+            },
+            {
+              "color": [
+                0.8666667342185974,
+                0.5176470875740051,
+                0.32156863808631897,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/br_drive"
+            }
+          ]
+        }
+      ],
+      "window": {
+        "name": "Swerve Modules",
         "visible": false
       }
     },
@@ -193,7 +336,8 @@
         }
       ],
       "window": {
-        "name": "Auto Balancing"
+        "name": "Auto Balancing",
+        "visible": false
       }
     },
     "Plot <5>": {
@@ -204,7 +348,7 @@
               "autoFit": true
             }
           ],
-          "height": 829,
+          "height": 879,
           "series": [
             {
               "color": [
@@ -259,6 +403,15 @@
                 1.0
               ],
               "id": "NT:/SmartDashboard/shoulder_setpoint"
+            },
+            {
+              "color": [
+                0.8549020290374756,
+                0.545098066329956,
+                0.7647059559822083,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/shoulderSetpoint_velocity"
             }
           ]
         }
@@ -271,12 +424,7 @@
     "Plot <6>": {
       "plots": [
         {
-          "axis": [
-            {
-              "autoFit": true
-            }
-          ],
-          "height": 727,
+          "height": 805,
           "series": [
             {
               "color": [
@@ -331,12 +479,50 @@
                 1.0
               ],
               "id": "NT:/SmartDashboard/arm_extension_mps"
+            },
+            {
+              "color": [
+                0.8549020290374756,
+                0.545098066329956,
+                0.7647059559822083,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/arm_extend_manual"
+            },
+            {
+              "color": [
+                0.5490196347236633,
+                0.5490196347236633,
+                0.5490196347236633,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/smax_extend_volts"
             }
           ]
         }
       ],
       "window": {
-        "name": "Arm Extension",
+        "name": "Arm Extension"
+      }
+    },
+    "Plot <7>": {
+      "plots": [
+        {
+          "height": 644,
+          "series": [
+            {
+              "color": [
+                0.2980392277240753,
+                0.44705885648727417,
+                0.6901960968971252,
+                1.0
+              ],
+              "id": "NT:/SmartDashboard/curr_angle_deg"
+            }
+          ]
+        }
+      ],
+      "window": {
         "visible": false
       }
     }

@@ -4,22 +4,27 @@ wrist::Wrist::Wrist() {
     wristMotor.SetIdleMode(rev::CANSparkMax::IdleMode::kBrake);
     wristMotor.SetSmartCurrentLimit(25);
     wristMotor.SetInverted(true);
-    wristEncoder.SetPosition(0);
     SetRotationGoal(GetRotation());
     wristTimer.Restart();
 }
 
 void wrist::Wrist::Tick(units::degree_t shoulderRotation) {
     frc::SmartDashboard::PutNumber("wrist_angle", GetRotation().value());
-    frc::SmartDashboard::PutNumber("wrist_pos", wristEncoder.GetPosition());
+    frc::SmartDashboard::PutNumber("wrist_pos", thruboreEnc.GetAbsolutePosition());
     frc::SmartDashboard::PutNumber("wrist_goal", units::degree_t(wristGoal.position).value());
     frc::SmartDashboard::PutNumber("wristTimer_s", wristTimer.Get().value());
 
     if(manualPercentage != 0) {
-        wristMotor.SetVoltage((manualPercentage * 12_V));
-        wristTimer.Restart();
-        wristGoal = { GetRotation(), 0_deg_per_s };
-        wristSetpoint = { GetRotation(), 0_deg_per_s };
+        // If the rotation is within the allowed range OR the intake is trying
+        // to get back within the range, allow voltage, else don't
+        if ((GetRotation().value() >= -90 && GetRotation().value() <= 90) || manualPercentage * (GetRotation().value() >= 0 ? 1 : -1) < 0) {
+            wristMotor.SetVoltage((manualPercentage * 12_V));
+            wristTimer.Restart();
+            wristGoal = { GetRotation(), 0_deg_per_s };
+            wristSetpoint = { GetRotation(), 0_deg_per_s };
+        } else {
+            wristMotor.SetVoltage(0_V);
+        }
     }
     else {
         // Since the movements on the end of the wrist are amplified by the shoulder, we really don't care too much about
@@ -41,18 +46,34 @@ void wrist::Wrist::Tick(units::degree_t shoulderRotation) {
         frc::SmartDashboard::PutNumber("wristSetpoint_position", units::degree_t(wristSetpoint.position).value());
         frc::SmartDashboard::PutNumber("wristGoal_position", units::degree_t(wristGoal.position).value());
 
-        units::volt_t ff = (Constants::kS * wpi::sgn(wristSetpoint.velocity)) + (Constants::kG * units::math::cos(shoulderRotation)) + ((Constants::kV * wristSetpoint.velocity));
+        units::volt_t ff = (Constants::kS * wpi::sgn(wristSetpoint.velocity));
         frc::SmartDashboard::PutNumber("wrist_ff_v", ff.value());
-        wristMotor.SetVoltage(ff + units::volt_t(controller.Calculate(units::radian_t(GetRotation()).value(), wristGoal.position.value())));
+        frc::SmartDashboard::PutNumber("wrist_pid_v", controller.Calculate(units::radian_t(GetRotation()).value(), wristGoal.position.value()));
+        const auto voltage = ff + units::volt_t(controller.Calculate(units::radian_t(GetRotation()).value(), wristGoal.position.value()));
+        //if ((GetRotation().value() >= -90 && GetRotation().value() <= 90) || voltage.value() * (GetRotation().value() >= 0 ? -1 : 1) < 0 )
+        wristMotor.SetVoltage(voltage);
+        //else
+        //    wristMotor.SetVoltage(0_V);
     }
 }
 
 void wrist::Wrist::SetRotationGoal(units::degree_t rot) {
     wristGoal = { rot, 0_deg_per_s };
-    controller.SetSetpoint(wristGoal.position.value());
+    //controller.SetSetpoint(wristGoal.position.value());
 }
 
 units::degree_t wrist::Wrist::GetRotation() {
-    units::degree_t angle = units::degree_t { (wristEncoder.GetPosition() / Constants::kWristGearRatio) * 360 } + Constants::kStartingAngle;
-    return angle;
+    units::degree_t raw = thruboreEnc.Get();
+
+    raw = (180_deg - raw) + Constants::kAngleOffset;
+
+    while (units::math::abs(raw) > 360_deg) {
+        raw += raw < 0_deg ? 360_deg : -360_deg;
+    }
+
+    raw = -raw;
+
+    raw = raw > 180_deg ? raw - 360_deg : raw;
+
+    return raw;
 }

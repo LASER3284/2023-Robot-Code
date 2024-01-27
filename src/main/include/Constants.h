@@ -17,23 +17,17 @@ namespace constants {
     enum LogButtons	 		{ eButtonTrigger = 1, eButton2, eButton3, eButton4, eButton5, eButton6, eButton7, eButton8, eButton9, eButton10, eButton11, eButton12};
 
     enum ButtonBoardButtons {
-        eUp = 1,
-        eOut = 2,
-        eRight = 3, 
-        eMid = 4, 
-        eLeft = 5, 
-        eDown = 6, 
-
-        eConeMode = 8,
-        eCubeMode = 9,
-
-        eShelf = 10,
-        eGround = 7, 
-        eForkDown = 11,
-        eForkUp = 12,
+        eLow = 1,
+        eMid,
+        eHigh,
+        ePanic,
+        eGroundTipped,
+        eGround,
+        eCube,
+        eSingle,
+        eShelf,
+        eSwitch
     };
-
-    enum ButtonBoardAxis			{ eJoystickAxisX = 0, eJoyStickAxisY };
 
     static double mapScalarToRange(double inValue, double out_min, double out_max, double in_min = -1, double in_max = 1) {
         double x = (inValue - in_min) / (in_max - in_min);

@@ -11,6 +11,15 @@
 namespace constants {
     class FieldConstants {
         public:
+            enum GridHeights {
+                eUp = 0,
+                eMid,
+                eGround,
+                eGroundSpit,
+                eIntake,
+                eStopped,
+            };
+
             static constexpr units::inch_t fieldLength = 651.25_in;
             static constexpr units::inch_t fieldWidth = 315.5_in;
 

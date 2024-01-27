@@ -11,6 +11,7 @@
 #include <frc/smartdashboard/SmartDashboard.h>
 #include <frc/trajectory/TrapezoidProfile.h>
 #include <frc/Timer.h>
+#include <frc/DutyCycleEncoder.h>
 
 namespace wrist {
 
@@ -22,13 +23,16 @@ namespace wrist {
             /// @brief The gear ratio from the NEO 550 to the output of the wrist.
             static constexpr double kWristGearRatio = 90.0 * (70.0 / 48.0);
 
-            /// @brief The starting angle for the wrist
-            static constexpr units::degree_t kStartingAngle = 98_deg;
+            /// @brief The starting angle for the wrist.
+            static constexpr units::degree_t kStartingAngle = 95_deg;
 
-            static constexpr units::volt_t kS = 0.13643_V;
-            static constexpr units::volt_t kG = 0.1052_V;
-            static constexpr auto kV = 1.2617_V / 1_rad_per_s;
-            static constexpr units::degree_t kMaxAngle = 185_deg;
+            /// @brief The angle offset for the absolute encoder on the wrist.
+            static constexpr units::degree_t kAngleOffset = -218.7_deg;
+
+            static constexpr units::volt_t kS = 0.17985_V;
+            //static constexpr units::volt_t kG = 0.55215_V;
+            //static constexpr auto kV = 0.014432_V / 1_deg_per_s;
+            //static constexpr units::degree_t kMaxAngle = 185_deg;
     };
 
     class Wrist {
@@ -61,8 +65,7 @@ namespace wrist {
                 wristSetpoint = { GetRotation(), 0_rad_per_s };
             }
 
-            void ResetRotation() { 
-                wristEncoder.SetPosition(-38.28125);
+            void ResetRotation() {
                 SetRotationGoal(GetRotation());
                 wristTimer.Restart();
             }
@@ -70,10 +73,13 @@ namespace wrist {
             rev::CANSparkMax wristMotor { Constants::kWristMotorID, rev::CANSparkMaxLowLevel::MotorType::kBrushless };
             rev::SparkMaxRelativeEncoder wristEncoder = wristMotor.GetEncoder();
 
+            frc::DutyCycleEncoder thruboreEnc { 0 };
+
+            // 5V Max control effort
             frc2::PIDController controller {
-                5.9051,    // kP
+                1.7053,    // kP
                 0.0,    // kI
-                1.0358    // kD
+                0.026178    // kD
             };
 
             double manualPercentage = 0.0;
